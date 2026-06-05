@@ -1517,7 +1517,7 @@ function renderTorneView(){
       <button onclick="tornEditName(${s.id})" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text2);font-size:12px;cursor:pointer;">✏️</button>
       <button onclick="tornDelete(${s.id})" style="background:var(--red2);border:1px solid var(--red);border-radius:8px;padding:6px 10px;color:#f4d0d0;font-size:12px;cursor:pointer;">🗑</button>
     ` : '';
-    const placerBtn = `<button onclick="placerTorn(${s.id})" style="background:${s.lat?'var(--bg3)':'var(--green2)'};border:1px solid ${s.lat?'var(--border)':'var(--green)'};border-radius:8px;padding:6px 10px;color:${s.lat?'var(--text2)':'var(--text)'};font-size:12px;cursor:pointer;">${s.lat?'🗺':'📍'}</button>`;
+    const placerBtn = `<button onclick="placerTorn(${s.id})" style="background:${s.lat?'var(--bg3)':'var(--green2)'};border:1px solid ${s.lat?'var(--border)':'var(--green)'};border-radius:8px;padding:6px 10px;color:${s.lat?'var(--text2)':'var(--text)'};font-size:12px;cursor:pointer;" title="${s.lat?'Flyt på kort':'Placer på kort'}">${s.lat?'🗺':'📍'}</button>`;
     return `<div class="card">
       <div style="display:flex;align-items:center;gap:10px;">
         <div style="width:40px;height:40px;background:${bk?'var(--pink)':'var(--gold)'};color:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;font-family:'Playfair Display',serif;flex-shrink:0;">${s.id}</div>
@@ -1533,12 +1533,19 @@ function renderTorneView(){
 }
 
 function placerTorn(id){
-  // Go to kort and activate placing for this stand
+  const s = stands.find(x=>x.id===id);
+  if(!s){ toast('Torn ikke fundet'); return; }
   showView('kort');
   setTimeout(()=>{
-    selectS(id);
-    toast('📍 Tryk på kortet for at placere '+( stands.find(s=>s.id===id)?.name||'torn'));
-  }, 300);
+    map.invalidateSize();
+    sel = s;
+    placing = s;
+    renderStands();
+    document.getElementById('mb').style.display='block';
+    document.getElementById('pn').textContent = s.name;
+    map.getContainer().style.cursor='crosshair';
+    toast('📍 Tryk på kortet for at placere '+s.name);
+  }, 400);
 }
 
 function tornEditName(id){
