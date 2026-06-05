@@ -953,6 +953,8 @@ function toggleP(id){
   const el=document.getElementById(id),btn=document.getElementById(id+'-t');
   el.classList.toggle('coll');
   btn.textContent=el.classList.contains('coll')?'＋':'−';
+  // Genindlæs torne-liste når panelet åbnes
+  if(id==='tp' && !el.classList.contains('coll')) renderStands();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1012,9 +1014,9 @@ function renderStands(){
       <button class="sbtn" title="Book / placer" onclick="selectS(${s.id})">📍</button>`;
     list.appendChild(d);
   });
-  // Only admins see add button and edit buttons
   const addBtn=document.getElementById('addBtn');
-  if(addBtn) addBtn.style.display=currentUser?'':'none';}
+  if(addBtn) addBtn.style.display = currentUser ? 'block' : 'none';
+}
 
 function selectS(id){
   sel=stands.find(s=>s.id===id); if(!sel)return;
