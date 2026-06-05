@@ -1143,8 +1143,9 @@ async function saveKill(){
   DB.kills[k.id]=k;
   await fbWrite(`kills/${k.id}`, k);
   logActivity(`${k.hunter} registrerede ${k.animal}`);
-  closeModal('kill-modal'); toast(`🎯 ${k.animal} registreret!`);
+  closeModal('kill-modal');
   await loadKillsFromFB();
+  toast(`🎯 ${k.animal} registreret!`);
 }
 
 function renderKills(){
@@ -1197,8 +1198,9 @@ async function saveHunt(){
   if(!DB.hunts) DB.hunts={};
   DB.hunts[h.id]=h;
   await fbWrite(`hunts/${h.id}`, h);
-  closeModal('hunt-modal'); toast('📅 Jagt tilføjet');
+  closeModal('hunt-modal');
   await loadHuntsFromFB();
+  toast('📅 Jagt tilføjet');
 }
 
 function renderHunts(){
