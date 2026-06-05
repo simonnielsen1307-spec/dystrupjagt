@@ -1194,26 +1194,26 @@ async function saveHunt(){
   const d=document.getElementById('hm-date').value;
   if(!d){toast('Vælg en dato');return;}
   const h={id:Date.now(),date:d,type:document.getElementById('hm-type').value,note:document.getElementById('hm-note').value,signups:[]};
-  hunts.push(h); hunts.sort((a,b)=>a.date.localeCompare(b.date));
   if(!DB.hunts) DB.hunts={};
   DB.hunts[h.id]=h;
-  await fbWrite(`hunts/${h.id}`, h);
+  hunts.push(h); hunts.sort((a,b)=>a.date.localeCompare(b.date));
   closeModal('hunt-modal');
-  await loadHuntsFromFB();
+  renderHunts();
   toast('📅 Jagt tilføjet');
+  await fbWrite(`hunts/${h.id}`, h);
 }
 
 function renderHunts(){
   const list=document.getElementById('hunt-list');
   if(!hunts.length){ list.innerHTML='<div class="empty">Ingen fællesjagter planlagt.<br>Tryk ＋ for at tilføje datoer.</div>'; return; }
   list.innerHTML=hunts.map(h=>{
-    const signupRows=h.signups.map(s=>`
+    const signupRows=(h.signups||[]).map(s=>`
       <div class="signup-row">
         <span class="signup-name">👤 ${s.hunter}</span>
         <span class="signup-details">${s.guests?`${s.guests} gæst(er)`:''} ${s.dogs?`· ${s.dogs} hund(e)`:''} ${s.note?`· ${s.note}`:''}</span>
       </div>`).join('');
-    const totalGuests=h.signups.reduce((a,s)=>a+(s.guests||0),0);
-    const totalDogs=h.signups.reduce((a,s)=>a+(s.dogs||0),0);
+    const totalGuests=(h.signups||[]).reduce((a,s)=>a+(s.guests||0),0);
+    const totalDogs=(h.signups||[]).reduce((a,s)=>a+(s.dogs||0),0);
     return `<div class="hunt-card">
       <div style="display:flex;justify-content:space-between;align-items:start">
         <div>
