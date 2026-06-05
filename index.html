@@ -719,11 +719,16 @@ async function dbLoad(){
       DB_LOADED = true;
       console.log('DB loaded OK — torne:',Object.keys(DB.stands).length);
     } else {
-      DB_LOADED = true; // tom database er OK
+      DB_LOADED = true; // tom database er OK — tillad gemning
       console.log('DB er tom — klar til brug');
     }
   } catch(e){
     console.error('DB load fejl:', e.message);
+    // Sæt DB_LOADED til true alligevel så brugeren kan gemme lokalt
+    DB_LOADED = true;
+    if(!DB.stands) DB.stands={};
+    if(!DB.kills)  DB.kills={};
+    if(!DB.hunts)  DB.hunts={};
   }
 }
 
@@ -1160,7 +1165,9 @@ function saveKill(){
     note:document.getElementById('km-note').value
   };
   kills.unshift(k);
+  if(!DB.kills) DB.kills={};
   DB.kills[k.id]=k;
+  DB_LOADED=true; // Tillad gemning selvom initial load fejlede
   dbSave();
   logActivity(`${k.hunter} registrerede ${k.animal} på ${stands.find(s=>s.id===k.standId)?.name||'ukendt torn'}`);
   closeModal('kill-modal'); toast(`🎯 ${k.animal} registreret!`);
@@ -1211,10 +1218,12 @@ let curHuntId=null;
 function saveHunt(){
   if(!isAdmin()){ toast('⛔ Kun administrator kan tilføje jagter'); return; }
   const d=document.getElementById('hm-date').value;
-  if(!d){alert('Vælg en dato');return;}
+  if(!d){toast('Vælg en dato');return;}
   const h={id:Date.now(),date:d,type:document.getElementById('hm-type').value,note:document.getElementById('hm-note').value,signups:[]};
   hunts.push(h); hunts.sort((a,b)=>a.date.localeCompare(b.date));
+  if(!DB.hunts) DB.hunts={};
   DB.hunts[h.id]=h;
+  DB_LOADED=true;
   dbSave();
   closeModal('hunt-modal'); toast('📅 Jagt tilføjet');
   renderHunts();
