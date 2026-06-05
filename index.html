@@ -880,6 +880,14 @@ async function initFirebase(){
   }
 
   await loadStandsFromFB();
+  // Hent nextStandId fra DB
+  if(DB.nextStandId && DB.nextStandId > nextStandId){
+    nextStandId = DB.nextStandId;
+  } else {
+    // Beregn fra eksisterende torne
+    const maxId = Math.max(0, ...Object.keys(DB.stands||{}).map(Number));
+    if(maxId >= nextStandId) nextStandId = maxId + 1;
+  }
   await loadKillsFromFB();
   await loadHuntsFromFB();
   startPolling();
@@ -1051,14 +1059,23 @@ function deleteStand(){
 }
 function addStand(){
   if(!currentUser){ toast('Log ind først'); return; }
-  const s={id:nextStandId++,name:`Torn ${nextStandId-1}`,lat:null,lng:null,booking:null,marker:null};
+  const id = nextStandId++;
+  const s={id:id, name:`Torn ${id}`, lat:null, lng:null, booking:null, marker:null};
   stands.push(s);
   DB.nextStandId=nextStandId;
-  const {marker,...data}=s; DB.stands[s.id]=data;
+  const {marker,...data}=s;
+  DB.stands[s.id]=data;
   dbSave();
   renderStands();
+  // Åbn panel hvis det er foldet
+  const tp=document.getElementById('tp');
+  const tpBtn=document.getElementById('tp-t');
+  if(tp && tp.classList.contains('coll')){
+    tp.classList.remove('coll');
+    if(tpBtn) tpBtn.textContent='−';
+  }
   startEdit(s.id);
-  toast('✚ Torn tilføjet — placer den på kortet');
+  toast('✚ Torn '+id+' tilføjet — giv det et navn og placer det');
 }
 
 // ═══════════════════════════════════════════════════════════════
