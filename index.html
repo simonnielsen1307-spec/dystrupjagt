@@ -725,7 +725,7 @@ function startPolling(){
       if(d.kills && Object.keys(d.kills).length > 0 && JSON.stringify(d.kills)!==JSON.stringify(DB.kills)){
         DB.kills=d.kills;
         kills = Object.values(DB.kills).sort((a,b)=>(b.id||0)-(a.id||0));
-        if(document.getElementById('v-log').classList.contains('active')) renderKills();
+        renderKills();
         changed=true;
       }
       // Jagter — KUN opdater hvis der faktisk er data
@@ -818,13 +818,30 @@ async function loadStandsFromFB(){
   }
 }
 async function loadKillsFromFB(){
-  kills = Object.values(DB.kills||{}).sort((a,b)=>(b.id||0)-(a.id||0));
-  if(document.getElementById('v-log').classList.contains('active')) renderKills();
+  try{
+    const r = await fetch(FB+'/kills.json');
+    if(r.ok){
+      const d = await r.json();
+      if(d && typeof d === 'object'){
+        DB.kills = d;
+        kills = Object.values(d).sort((a,b)=>(b.id||0)-(a.id||0));
+      } else { kills = []; }
+    }
+  } catch(e){ kills = Object.values(DB.kills||{}).sort((a,b)=>(b.id||0)-(a.id||0)); }
+  renderKills();
 }
 async function loadHuntsFromFB(){
-  const h=Object.values(DB.hunts||{});
-  hunts = h.filter(x=>x&&x.date).sort((a,b)=>a.date.localeCompare(b.date));
-  if(document.getElementById('v-jagt').classList.contains('active')) renderHunts();
+  try{
+    const r = await fetch(FB+'/hunts.json');
+    if(r.ok){
+      const d = await r.json();
+      if(d && typeof d === 'object'){
+        DB.hunts = d;
+        hunts = Object.values(d).filter(x=>x&&x.date).sort((a,b)=>a.date.localeCompare(b.date));
+      } else { hunts = []; }
+    }
+  } catch(e){ hunts = Object.values(DB.hunts||{}).filter(x=>x&&x.date).sort((a,b)=>a.date.localeCompare(b.date)); }
+  renderHunts();
 }
 
 async function initFirebase(){
@@ -877,8 +894,8 @@ function showView(v){
   document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
   document.getElementById('v-'+v).classList.add('active');
   document.getElementById('tab-'+v).classList.add('active');
-  if(v==='log')   renderKills();
-  if(v==='jagt')  renderHunts();
+  if(v==='log')   loadKillsFromFB();
+  if(v==='jagt')  loadHuntsFromFB();
   if(v==='stat')  renderStats();
   if(v==='admin'){ renderMembers(); renderActivity(); }
   if(v==='kort')  setTimeout(()=>map.invalidateSize(),100);
