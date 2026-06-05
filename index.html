@@ -1188,7 +1188,7 @@ function deleteKill(id){
 // ═══════════════════════════════════════════════════════════════
 let curHuntId=null;
 
-function saveHunt(){
+async function saveHunt(){
   if(!isAdmin()){ toast('⛔ Kun administrator kan tilføje jagter'); return; }
   const d=document.getElementById('hm-date').value;
   if(!d){toast('Vælg en dato');return;}
@@ -1196,9 +1196,9 @@ function saveHunt(){
   hunts.push(h); hunts.sort((a,b)=>a.date.localeCompare(b.date));
   if(!DB.hunts) DB.hunts={};
   DB.hunts[h.id]=h;
-  fbWrite(`hunts/${h.id}`, h);
+  await fbWrite(`hunts/${h.id}`, h);
   closeModal('hunt-modal'); toast('📅 Jagt tilføjet');
-  renderHunts();
+  await loadHuntsFromFB();
 }
 
 function renderHunts(){
