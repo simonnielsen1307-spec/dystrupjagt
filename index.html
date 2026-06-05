@@ -1225,7 +1225,7 @@ function renderHunts(){
       </div>
       ${h.note?`<div class="hunt-note">📌 ${h.note}</div>`:''}
       <div class="hunt-row" style="margin-top:8px">
-        <span class="hunt-pill">👥 ${h.signups.length} jægere</span>
+        <span class="hunt-pill">👥 ${(h.signups||[]).length} jægere</span>
         ${totalGuests?`<span class="hunt-pill">🎟 ${totalGuests} gæster</span>`:''}
         ${totalDogs?`<span class="hunt-pill">🐕 ${totalDogs} hunde</span>`:''}
       </div>
@@ -1258,10 +1258,10 @@ function openSignup(huntId){
   document.getElementById('sm-guests').value=0;
   document.getElementById('sm-dogs').value=0;
   document.getElementById('sm-note').value='';
-  const existing=hunt.signups.find(s=>s.hunter===sel.value);
+  const existing=(hunt.signups||[]).find(s=>s.hunter===sel.value);
   document.getElementById('sm-unsign').style.display=existing?'':'none';
   sel.onchange=function(){
-    const ex=hunt.signups.find(s=>s.hunter===this.value);
+    const ex=(hunt.signups||[]).find(s=>s.hunter===this.value);
     document.getElementById('sm-unsign').style.display=ex?'':'none';
     if(ex){ document.getElementById('sm-guests').value=ex.guests||0; document.getElementById('sm-dogs').value=ex.dogs||0; document.getElementById('sm-note').value=ex.note||''; }
     else{ document.getElementById('sm-guests').value=0; document.getElementById('sm-dogs').value=0; document.getElementById('sm-note').value=''; }
