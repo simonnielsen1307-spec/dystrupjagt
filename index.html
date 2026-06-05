@@ -1066,16 +1066,17 @@ function addStand(){
   const {marker,...data}=s;
   DB.stands[s.id]=data;
   dbSave();
-  renderStands();
-  // Åbn panel hvis det er foldet
+  // Sørg for panel er åbent
   const tp=document.getElementById('tp');
   const tpBtn=document.getElementById('tp-t');
   if(tp && tp.classList.contains('coll')){
     tp.classList.remove('coll');
     if(tpBtn) tpBtn.textContent='−';
   }
-  startEdit(s.id);
-  toast('✚ Torn '+id+' tilføjet — giv det et navn og placer det');
+  renderStands();
+  // Vælg tornet direkte til placering — spring editbox over
+  selectS(id);
+  toast('📍 Torn '+id+' klar — tryk på kortet for at placere det');
 }
 
 // ═══════════════════════════════════════════════════════════════
