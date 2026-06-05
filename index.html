@@ -1196,11 +1196,12 @@ async function saveHunt(){
   const h={id:Date.now(),date:d,type:document.getElementById('hm-type').value,note:document.getElementById('hm-note').value,signups:[]};
   if(!DB.hunts) DB.hunts={};
   DB.hunts[h.id]=h;
-  hunts.push(h); hunts.sort((a,b)=>a.date.localeCompare(b.date));
+  hunts.push(h);
+  hunts.sort((a,b)=>a.date.localeCompare(b.date));
   closeModal('hunt-modal');
   renderHunts();
   toast('📅 Jagt tilføjet');
-  await fbWrite(`hunts/${h.id}`, h);
+  fbWrite(`hunts/${h.id}`, h);
 }
 
 function renderHunts(){
