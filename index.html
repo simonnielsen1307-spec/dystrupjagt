@@ -619,7 +619,7 @@ function logActivity(msg){
   DB.activity.unshift(entry);
   // Behold kun de seneste 100
   if(DB.activity.length>100) DB.activity=DB.activity.slice(0,100);
-  dbSave();
+  fbWrite('activity', DB.activity);
 }
 
 function renderActivity(){
@@ -680,7 +680,7 @@ async function saveMember(){
   // Hash adgangskoden før den gemmes
   const hash = await hashPass(pass);
   DB.members[name]={hash,admin};
-  dbSave();
+  fbWrite('members', DB.members);
   buildLoginSelect();
   renderMembers();
   closeModal('member-modal');
@@ -692,7 +692,7 @@ function deleteMember(name){
   showConfirm(`Slet ${name}?`, ()=>{
     if(!DB.members) DB.members={...DEFAULT_MEMBERS};
     delete DB.members[name];
-    dbSave();
+    fbWrite('members', DB.members);
     buildLoginSelect();
     renderMembers();
     logActivity(`${currentUser} slettede ${name}`);
@@ -703,66 +703,68 @@ function deleteMember(name){
 // ═══════════════════════════════════════════════════════════════
 // JSONBIN DATABASE — virker på alle enheder inkl. iOS Safari
 // ═══════════════════════════════════════════════════════════════
-const FB_URL = 'https://dystrup-jagt-default-rtdb.europe-west1.firebasedatabase.app';
+const FB = 'https://dystrup-jagt-default-rtdb.europe-west1.firebasedatabase.app/db';
 
-// Hent hele databasen
+// ── Skriv ét objekt direkte til Firebase-sti ──
+async function fbWrite(path, val){
+  try{
+    const r = await fetch(`${FB}/${path}.json`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(val)
+    });
+    if(r.ok) console.log('✅ Gemt:', path);
+    else console.error('❌ Gem fejl:', path, r.status);
+  } catch(e){ console.error('❌ Netværk:', path, e.message); }
+}
+
+// ── Slet ét objekt ──
+async function fbDelete(path){
+  try{
+    await fetch(`${FB}/${path}.json`, {method:'DELETE'});
+    console.log('🗑 Slettet:', path);
+  } catch(e){ console.error('❌ Slet fejl:', path, e.message); }
+}
+
+// ── Hent alt data ved login ──
 async function dbLoad(){
   try{
-    const r = await fetch(`${FB_URL}/db.json`);
+    const r = await fetch(`${FB}.json`);
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d = await r.json();
     if(d && typeof d === 'object'){
-      DB = d;
-      if(!DB.stands) DB.stands={};
-      if(!DB.kills)  DB.kills={};
-      if(!DB.hunts)  DB.hunts={};
-      DB_LOADED = true;
-      console.log('DB loaded OK — torne:',Object.keys(DB.stands).length);
-    } else {
-      DB_LOADED = true; // tom database er OK — tillad gemning
-      console.log('DB er tom — klar til brug');
+      if(d.stands) DB.stands = d.stands;
+      if(d.kills)  DB.kills  = d.kills;
+      if(d.hunts)  DB.hunts  = d.hunts;
+      if(d.members)   DB.members   = d.members;
+      if(d.activity)  DB.activity  = d.activity;
+      if(d.nextStandId) DB.nextStandId = d.nextStandId;
     }
-  } catch(e){
-    console.error('DB load fejl:', e.message);
-    // Sæt DB_LOADED til true alligevel så brugeren kan gemme lokalt
     DB_LOADED = true;
-    if(!DB.stands) DB.stands={};
-    if(!DB.kills)  DB.kills={};
-    if(!DB.hunts)  DB.hunts={};
-  }
-}
-
-// Gem hele databasen
-async function dbSave(){
-  if(!DB_LOADED){
-    console.warn('dbSave AFVIST — DB ikke indlæst endnu');
-    return;
-  }
-  try{
-    const r = await fetch(`${FB_URL}/db.json`, {
-      method: 'PUT',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(DB)
-    });
-    console.log('DB saved OK status:', r.status);
+    console.log('✅ DB loaded — torne:', Object.keys(DB.stands||{}).length,
+                'kills:', Object.keys(DB.kills||{}).length,
+                'jagter:', Object.keys(DB.hunts||{}).length);
   } catch(e){
-    console.error('DB save fejl:', e.message);
+    console.error('❌ DB load fejl:', e.message);
+    DB_LOADED = true; // tillad brug selv ved netværksfejl
   }
 }
 
-// Polling hvert 8. sekund
+// ── Polling hvert 10. sekund ──
 function startPolling(){
   setInterval(async ()=>{
-    const oldDB=JSON.stringify(DB);
-    await dbLoad();
-    if(JSON.stringify(DB)!==oldDB){
-      // Data ændret af en anden bruger — opdater UI
-      syncStandsFromDB();
-      if(document.getElementById('v-log').classList.contains('active')) renderKills();
-      if(document.getElementById('v-jagt').classList.contains('active')) renderHunts();
-      if(document.getElementById('v-stat').classList.contains('active')) renderStats();
-    }
-  }, 8000);
+    try{
+      const r = await fetch(`${FB}.json`);
+      if(!r.ok) return;
+      const d = await r.json();
+      if(!d) return;
+      let changed = false;
+      if(d.stands && JSON.stringify(d.stands)!==JSON.stringify(DB.stands)){ DB.stands=d.stands; syncStandsFromDB(); changed=true; }
+      if(d.kills  && JSON.stringify(d.kills) !==JSON.stringify(DB.kills) ){ DB.kills =d.kills;  if(document.getElementById('v-log').classList.contains('active'))  renderKills();  changed=true; }
+      if(d.hunts  && JSON.stringify(d.hunts) !==JSON.stringify(DB.hunts) ){ DB.hunts =d.hunts;  if(document.getElementById('v-jagt').classList.contains('active')) renderHunts(); changed=true; }
+      if(changed) console.log('🔄 Data opdateret fra server');
+    } catch(e){}
+  }, 10000);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -784,7 +786,7 @@ const DEFAULT_STANDS = Array.from({length:10},(_,i)=>({
 async function saveOneSt(s){
   const {marker,...data}=s;
   DB.stands[s.id]=data;
-  await dbSave();
+  await fbWrite(`stands/${s.id}`, data);
 }
 // Gem alle torne
 async function saveSt(){
@@ -792,19 +794,20 @@ async function saveSt(){
   stands.forEach(s=>{ const {marker,...data}=s; obj[s.id]=data; });
   DB.stands=obj;
   DB.nextStandId=nextStandId;
-  await dbSave();
+  await fbWrite('stands', obj);
+  await fbWrite('nextStandId', nextStandId);
 }
 async function saveKills(){
   const obj={};
   kills.forEach(k=>{ obj[k.id]=k; });
   DB.kills=obj;
-  await dbSave();
+  await fbWrite('kills', obj);
 }
 async function saveHunts(){
   const obj={};
   hunts.forEach(h=>{ obj[h.id]=h; });
   DB.hunts=obj;
-  await dbSave();
+  await fbWrite('hunts', obj);
 }
 
 // Sync stands fra DB til kort
@@ -881,7 +884,8 @@ async function initFirebase(){
     }
     DB.stands=defaultS;
     DB.nextStandId=11;
-    await dbSave();
+    await fbWrite('stands', defaultS);
+    await fbWrite('nextStandId', 11);
   }
 
   await loadStandsFromFB();
@@ -1060,7 +1064,7 @@ function deleteStand(){
     stands=stands.filter(s=>s.id!==sel.id);
     sel=null; document.getElementById('editbox').style.display='none';
     delete DB.stands[id];
-    dbSave();
+    fbDelete(`stands/${id}`);
     renderStands(); toast('🗑 Torn slettet');
   });
 }
@@ -1072,7 +1076,8 @@ function addStand(){
   DB.nextStandId=nextStandId;
   const {marker,...data}=s;
   DB.stands[s.id]=data;
-  dbSave();
+  fbWrite(`stands/${s.id}`, data);
+  fbWrite('nextStandId', nextStandId);
   // Sørg for panel er åbent
   const tp=document.getElementById('tp');
   const tpBtn=document.getElementById('tp-t');
@@ -1167,9 +1172,8 @@ function saveKill(){
   kills.unshift(k);
   if(!DB.kills) DB.kills={};
   DB.kills[k.id]=k;
-  DB_LOADED=true; // Tillad gemning selvom initial load fejlede
-  dbSave();
-  logActivity(`${k.hunter} registrerede ${k.animal} på ${stands.find(s=>s.id===k.standId)?.name||'ukendt torn'}`);
+  fbWrite(`kills/${k.id}`, k);
+  logActivity(`${k.hunter} registrerede ${k.animal}`);
   closeModal('kill-modal'); toast(`🎯 ${k.animal} registreret!`);
   renderKills();
 }
@@ -1205,7 +1209,7 @@ function deleteKill(id){
   showConfirm('Slet denne registrering?', ()=>{
     kills=kills.filter(k=>k.id!==id);
     delete DB.kills[id];
-    dbSave();
+    fbDelete(`kills/${id}`);
     renderKills(); toast('🗑 Registrering slettet');
   });
 }
@@ -1223,8 +1227,7 @@ function saveHunt(){
   hunts.push(h); hunts.sort((a,b)=>a.date.localeCompare(b.date));
   if(!DB.hunts) DB.hunts={};
   DB.hunts[h.id]=h;
-  DB_LOADED=true;
-  dbSave();
+  fbWrite(`hunts/${h.id}`, h);
   closeModal('hunt-modal'); toast('📅 Jagt tilføjet');
   renderHunts();
 }
@@ -1269,7 +1272,7 @@ function deleteHunt(id){
   showConfirm('Slet denne jagt?', ()=>{
     hunts=hunts.filter(h=>h.id!==id);
     delete DB.hunts[id];
-    dbSave();
+    fbDelete(`hunts/${id}`);
     renderHunts();
   });
 }
@@ -1302,8 +1305,9 @@ function saveSignup(){
   const filtered=signups.filter(s=>s.hunter!==hunter);
   filtered.push({hunter,guests:parseInt(document.getElementById('sm-guests').value)||0,dogs:parseInt(document.getElementById('sm-dogs').value)||0,note:document.getElementById('sm-note').value});
   hunt.signups=filtered;
+  if(!DB.hunts) DB.hunts={};
   DB.hunts[curHuntId]=hunt;
-  dbSave();
+  fbWrite(`hunts/${curHuntId}`, hunt);
   closeModal('signup-modal'); renderHunts(); toast(`✓ ${hunter} tilmeldt`);
 }
 
@@ -1311,8 +1315,9 @@ function removeSignup(){
   const hunt=hunts.find(h=>h.id===curHuntId); if(!hunt)return;
   const hunter=document.getElementById('sm-hunter').value;
   hunt.signups=(hunt.signups||[]).filter(s=>s.hunter!==hunter);
+  if(!DB.hunts) DB.hunts={};
   DB.hunts[curHuntId]=hunt;
-  dbSave();
+  fbWrite(`hunts/${curHuntId}`, hunt);
   closeModal('signup-modal'); renderHunts(); toast(`✓ ${hunter} frameldt`);
 }
 
