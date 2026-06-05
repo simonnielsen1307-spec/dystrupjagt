@@ -337,6 +337,7 @@ main{flex:1;overflow:hidden;position:relative;padding-bottom:58px;}
 <div class="view" id="v-torne" style="flex-direction:column;">
   <div class="view-header">
     <h2>🌲 Torne</h2>
+    <button class="btn-add" onclick="addStand()">＋ Tilføj torn</button>
   </div>
   <div class="view-inner" id="torne-list-view"></div>
 </div>
@@ -492,10 +493,9 @@ main{flex:1;overflow:hidden;position:relative;padding-bottom:58px;}
 
 <!-- ══ CHAT ══════════════════════════════════════════════════ -->
 <div class="view" id="v-chat" style="flex-direction:column;">
-  <div style="background:var(--bg);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;gap:6px;overflow-x:auto;flex-shrink:0;">
+  <div style="background:var(--bg);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;gap:6px;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;">
     <button id="chat-tab-alle" onclick="switchChat('alle')" style="background:var(--gold);color:var(--bg);border:none;border-radius:20px;padding:7px 14px;font-family:'Lora',serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">👥 Alle</button>
     <div id="chat-private-tabs" style="display:flex;gap:6px;"></div>
-    <button onclick="newPrivateChat()" style="background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:20px;padding:7px 14px;font-family:'Lora',serif;font-size:12px;cursor:pointer;white-space:nowrap;">＋ Privat</button>
   </div>
   <div class="view-inner" id="chat-list" style="padding-bottom:70px;"></div>
   <div style="position:absolute;bottom:58px;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:8px 12px;display:flex;gap:8px;">
@@ -1668,17 +1668,20 @@ async function loadChat(){
 function buildChatTabs(){
   const container = document.getElementById('chat-private-tabs');
   if(!container) return;
-  // Find all private chats involving currentUser
-  const myChats = new Set();
-  Object.values(DB.chat||{}).forEach(m=>{
-    if(m.channel && m.channel.startsWith('privat_') && m.channel.includes(currentUser)){
-      myChats.add(m.channel);
-    }
-  });
-  container.innerHTML = [...myChats].map(ch=>{
-    const otherUser = ch.replace('privat_','').replace(currentUser,'').replace('_','');
+  
+  // Show all other members as private chat buttons
+  const others = getHunters().filter(h=>h!==currentUser);
+  
+  container.innerHTML = others.map(other=>{
+    const ch = getChatKey(currentUser, other);
     const isActive = activeChatChannel === ch;
-    return `<button onclick="switchChat('${ch}')" style="background:${isActive?'var(--green2)':'var(--bg2)'};color:${isActive?'var(--text)':'var(--text3)'};border:1px solid ${isActive?'var(--green)':'var(--border)'};border-radius:20px;padding:7px 14px;font-family:'Lora',serif;font-size:12px;cursor:pointer;white-space:nowrap;">🔒 ${otherUser}</button>`;
+    // Count unread messages
+    const unread = Object.values(DB.chat||{}).filter(m=>
+      m.channel===ch && m.user!==currentUser && !m.read
+    ).length;
+    return `<button onclick="switchChat('${ch}')" style="background:${isActive?'var(--green2)':'var(--bg2)'};color:${isActive?'var(--text)':'var(--text3)'};border:1px solid ${isActive?'var(--green)':'var(--border)'};border-radius:20px;padding:7px 14px;font-family:'Lora',serif;font-size:12px;cursor:pointer;white-space:nowrap;position:relative;">
+      🔒 ${other}${unread>0?` <span style="background:var(--red);color:white;border-radius:50%;padding:1px 5px;font-size:10px;">${unread}</span>`:''}
+    </button>`;
   }).join('');
 
   // Update alle button style
