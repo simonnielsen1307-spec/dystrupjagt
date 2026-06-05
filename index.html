@@ -546,7 +546,7 @@ async function doLogin(){
   document.getElementById('user-badge').textContent = '👤 '+user+crown;
   document.getElementById('tab-admin').style.display = isAdmin() ? '' : 'none';
   err.textContent='';
-  sessionStorage.setItem('jt_user', user);
+  localStorage.setItem('jt_user', user);
   setTimeout(async ()=>{
     map.invalidateSize();
     map.setView([56.448, 10.652], 14);
@@ -559,7 +559,7 @@ function doLogout(){
   showConfirm('Log ud?', ()=>{
     logActivity(currentUser+' loggede ud');
     currentUser=null;
-    sessionStorage.removeItem('jt_user');
+    localStorage.removeItem('jt_user');
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('login-user').value='';
     document.getElementById('login-pass').value='';
@@ -1345,7 +1345,7 @@ renderStands();
 buildLoginSelect();
 
 (function(){
-  const u=sessionStorage.getItem('jt_user');
+  const u=localStorage.getItem('jt_user');
   if(u){
     currentUser=u;
     document.getElementById('login-screen').classList.add('hidden');
