@@ -26,20 +26,22 @@ html{font-size:16px;}
 body{font-family:'Lora',Georgia,serif;background:var(--bg);color:var(--text);height:100dvh;display:flex;flex-direction:column;overflow:hidden;-webkit-text-size-adjust:100%;}
 
 /* ── HEADER ── */
-header{background:var(--bg);border-bottom:2px solid var(--gold);padding:0;display:flex;flex-shrink:0;align-items:stretch;height:56px;}
-.logo-area{padding:0 10px;display:flex;align-items:center;gap:6px;border-right:1px solid var(--border);flex-shrink:0;}
-.logo-area h1{font-family:'Playfair Display',serif;font-size:13px;color:var(--gold);letter-spacing:.5px;white-space:nowrap;}
-nav{display:flex;flex:1;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
-.nav-tab{flex:0 0 52px;padding:6px 2px;text-align:center;font-size:9px;color:var(--text3);cursor:pointer;border:none;background:none;font-family:'Lora',serif;border-bottom:3px solid transparent;transition:all .2s;min-width:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.nav-tab:hover{color:var(--text2);background:var(--bg2);}
-.nav-tab.active{color:var(--gold);border-bottom:3px solid var(--gold);background:var(--bg2);}
-.nav-tab .ticon{display:block;font-size:20px;margin-bottom:1px;line-height:1;}
-.nav-tab .tlabel{font-size:9px;line-height:1;}
-.user-badge{font-size:11px;color:var(--gold);padding:4px 8px;border:1px solid var(--border);border-radius:20px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;margin:auto 6px;flex-shrink:0;}
+header{background:var(--bg);border-bottom:1px solid var(--border);padding:0;display:flex;flex-shrink:0;align-items:center;justify-content:center;height:48px;position:relative;}
+.logo-area{display:flex;align-items:center;gap:6px;}
+.logo-area h1{font-family:'Playfair Display',serif;font-size:16px;color:var(--gold);letter-spacing:.5px;}
+.user-badge{font-size:10px;color:var(--gold);padding:3px 8px;border:1px solid var(--border);border-radius:20px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;position:absolute;right:8px;top:50%;transform:translateY(-50%);}
 .user-badge:hover{background:var(--bg2);}
 
+/* ── BOTTOM NAV ── */
+nav{position:fixed;bottom:0;left:0;right:0;z-index:2000;background:var(--bg);border-top:1px solid var(--border);display:flex;height:58px;padding-bottom:env(safe-area-inset-bottom);}
+.nav-tab{flex:1;padding:6px 2px 4px;text-align:center;font-size:8px;color:var(--text3);cursor:pointer;border:none;background:none;font-family:'Lora',serif;border-top:2px solid transparent;transition:all .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;}
+.nav-tab:hover{color:var(--text2);}
+.nav-tab.active{color:var(--gold);border-top:2px solid var(--gold);}
+.nav-tab .ticon{display:block;font-size:20px;line-height:1;margin-bottom:2px;}
+.nav-tab .tlabel{font-size:8px;line-height:1;}
+
 /* ── MAIN ── */
-main{flex:1;overflow:hidden;position:relative;}
+main{flex:1;overflow:hidden;position:relative;padding-bottom:58px;}
 
 /* ── VIEWS ── */
 .view{position:absolute;inset:0;display:none;overflow:hidden;}
@@ -238,23 +240,21 @@ main{flex:1;overflow:hidden;position:relative;}
 </div>
 
 <header>
-  <div class="logo-area"><h1>🦌 Dystrup</h1></div>
-  <nav>
-    <button class="nav-tab active" onclick="showView('kort')" id="tab-kort"><span class="ticon">🗺</span><span class="tlabel">Kort</span></button>
-    <button class="nav-tab" onclick="showView('torne')" id="tab-torne"><span class="ticon">🌲</span><span class="tlabel">Torne</span></button>
-    <button class="nav-tab" onclick="showView('log')"  id="tab-log" ><span class="ticon">🎯</span><span class="tlabel">Skydelog</span></button>
-    <button class="nav-tab" onclick="showView('jagt')" id="tab-jagt"><span class="ticon">📅</span><span class="tlabel">Jagter</span></button>
-    <button class="nav-tab" onclick="showView('vejr')" id="tab-vejr"><span class="ticon">🌡️</span><span class="tlabel">Vejr</span></button>
-    <button class="nav-tab" onclick="showView('chat')" id="tab-chat"><span class="ticon">💬</span><span class="tlabel">Chat</span></button>
-    <button class="nav-tab" onclick="showView('vagt')" id="tab-vagt"><span class="ticon">📋</span><span class="tlabel">Vagt</span></button>
-    <button class="nav-tab" onclick="showView('kvoter')" id="tab-kvoter"><span class="ticon">🦌</span><span class="tlabel">Kvoter</span></button>
-    <button class="nav-tab" onclick="showView('stat')" id="tab-stat"><span class="ticon">📊</span><span class="tlabel">Statistik</span></button>
-    <button class="nav-tab" onclick="showView('admin')" id="tab-admin" style="display:none"><span class="ticon">👑</span><span class="tlabel">Admin</span></button>
-  </nav>
-  <div style="padding:0 8px;display:flex;align-items:center;flex-shrink:0;">
-    <span class="user-badge" id="user-badge" onclick="doLogout()">👤</span>
-  </div>
+  <div class="logo-area"><h1>🦌 Dystrup Jagtkonsortet</h1></div>
+  <span class="user-badge" id="user-badge" onclick="doLogout()">👤</span>
 </header>
+<nav>
+  <button class="nav-tab active" onclick="showView('kort')" id="tab-kort"><span class="ticon">🗺</span><span class="tlabel">Kort</span></button>
+  <button class="nav-tab" onclick="showView('torne')" id="tab-torne"><span class="ticon">🌲</span><span class="tlabel">Torne</span></button>
+  <button class="nav-tab" onclick="showView('log')" id="tab-log"><span class="ticon">🎯</span><span class="tlabel">Skydelog</span></button>
+  <button class="nav-tab" onclick="showView('jagt')" id="tab-jagt"><span class="ticon">📅</span><span class="tlabel">Jagter</span></button>
+  <button class="nav-tab" onclick="showView('vejr')" id="tab-vejr"><span class="ticon">🌡️</span><span class="tlabel">Vejr</span></button>
+  <button class="nav-tab" onclick="showView('chat')" id="tab-chat"><span class="ticon">💬</span><span class="tlabel">Chat</span></button>
+  <button class="nav-tab" onclick="showView('vagt')" id="tab-vagt"><span class="ticon">📋</span><span class="tlabel">Vagt</span></button>
+  <button class="nav-tab" onclick="showView('kvoter')" id="tab-kvoter"><span class="ticon">🦌</span><span class="tlabel">Kvoter</span></button>
+  <button class="nav-tab" onclick="showView('stat')" id="tab-stat"><span class="ticon">📊</span><span class="tlabel">Statistik</span></button>
+  <button class="nav-tab" onclick="showView('admin')" id="tab-admin" style="display:none"><span class="ticon">👑</span><span class="tlabel">Admin</span></button>
+</nav>
 
 <main>
 
@@ -1468,20 +1468,49 @@ function toast(msg){
 function renderTorneView(){
   const list = document.getElementById('torne-list-view');
   if(!list) return;
-  if(!stands.length){ list.innerHTML='<div class="empty">Ingen torne endnu.</div>'; return; }
-  list.innerHTML = stands.map(s=>{
+  const validStands = stands.filter(s=>s.id && s.name && s.name !== 'undefined');
+  if(!validStands.length){ list.innerHTML='<div class="empty">Ingen torne endnu.</div>'; return; }
+  list.innerHTML = validStands.map(s=>{
     const bk = s.booking;
+    const adminBtns = isAdmin() ? `
+      <button onclick="tornEditName(${s.id})" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text2);font-size:12px;cursor:pointer;">✏️</button>
+      <button onclick="tornDelete(${s.id})" style="background:var(--red2);border:1px solid var(--red);border-radius:8px;padding:6px 10px;color:#f4d0d0;font-size:12px;cursor:pointer;">🗑</button>
+    ` : '';
     return `<div class="card">
-      <div style="display:flex;align-items:center;gap:12px;">
+      <div style="display:flex;align-items:center;gap:10px;">
         <div style="width:40px;height:40px;background:${bk?'var(--pink)':'var(--gold)'};color:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;font-family:'Playfair Display',serif;flex-shrink:0;">${s.id}</div>
         <div style="flex:1;">
-          <div class="card-title" style="margin:0;">${s.name}</div>
+          <div class="card-title" style="margin:0;" id="torne-name-${s.id}">${s.name}</div>
           <div style="font-size:12px;color:${bk?'var(--pink)':'var(--green)'};margin-top:3px;">${bk?'🔴 '+bk.hunter+(bk.time?' kl. '+bk.time:''):'🟢 Ledig'}</div>
         </div>
-        ${s.lat?`<button onclick="showView('kort')" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text2);font-size:12px;cursor:pointer;">🗺 Vis</button>`:'<span style="font-size:11px;color:var(--text3);">Ikke placeret</span>'}
+        ${adminBtns}
+        ${s.lat?`<button onclick="showView('kort')" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text2);font-size:12px;cursor:pointer;">🗺</button>`:''}
       </div>
     </div>`;
   }).join('');
+}
+
+function tornEditName(id){
+  const s = stands.find(x=>x.id===id); if(!s) return;
+  const newName = prompt('Nyt navn for torn '+id+':', s.name);
+  if(!newName || !newName.trim()) return;
+  s.name = newName.trim();
+  saveOneSt(s);
+  renderTorneView();
+  toast('✓ Navn gemt');
+}
+
+function tornDelete(id){
+  if(!isAdmin()){ toast('⛔ Kun administrator'); return; }
+  showConfirm('Slet dette torn?', ()=>{
+    const s = stands.find(x=>x.id===id);
+    if(s && s.marker) map.removeLayer(s.marker);
+    stands = stands.filter(x=>x.id!==id);
+    delete DB.stands[id];
+    fbDelete(`stands/${id}`);
+    renderTorneView();
+    toast('🗑 Torn slettet');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
