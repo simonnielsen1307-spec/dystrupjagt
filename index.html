@@ -1128,7 +1128,7 @@ function openKillModal(){
 }
 document.querySelector('[onclick="openModal(\'kill-modal\')"]').onclick=openKillModal;
 
-function saveKill(){
+async function saveKill(){
   const k={
     id:Date.now(),
     hunter:document.getElementById('km-hunter').value,
@@ -1141,10 +1141,10 @@ function saveKill(){
   kills.unshift(k);
   if(!DB.kills) DB.kills={};
   DB.kills[k.id]=k;
-  fbWrite(`kills/${k.id}`, k);
+  await fbWrite(`kills/${k.id}`, k);
   logActivity(`${k.hunter} registrerede ${k.animal}`);
   closeModal('kill-modal'); toast(`🎯 ${k.animal} registreret!`);
-  renderKills();
+  await loadKillsFromFB();
 }
 
 function renderKills(){
@@ -1175,11 +1175,11 @@ function deleteKill(id){
   if(!isAdmin() && kills.find(k=>k.id===id)?.hunter!==currentUser){
     toast('⛔ Du kan kun slette dine egne registreringer'); return;
   }
-  showConfirm('Slet denne registrering?', ()=>{
+  showConfirm('Slet denne registrering?', async ()=>{
     kills=kills.filter(k=>k.id!==id);
     delete DB.kills[id];
-    fbDelete(`kills/${id}`);
-    renderKills(); toast('🗑 Registrering slettet');
+    await fbDelete(`kills/${id}`);
+    await loadKillsFromFB(); toast('🗑 Registrering slettet');
   });
 }
 
@@ -1238,11 +1238,11 @@ function fmtDate(d){ if(!d)return''; const dt=new Date(d+'T12:00:00'); return dt
 
 function deleteHunt(id){
   if(!isAdmin()){ toast('⛔ Kun administrator kan slette jagter'); return; }
-  showConfirm('Slet denne jagt?', ()=>{
+  showConfirm('Slet denne jagt?', async ()=>{
     hunts=hunts.filter(h=>h.id!==id);
     delete DB.hunts[id];
-    fbDelete(`hunts/${id}`);
-    renderHunts();
+    await fbDelete(`hunts/${id}`);
+    await loadHuntsFromFB();
   });
 }
 
@@ -1266,7 +1266,7 @@ function openSignup(huntId){
   openModal('signup-modal');
 }
 
-function saveSignup(){
+async function saveSignup(){
   const hunt=hunts.find(h=>h.id===curHuntId); if(!hunt)return;
   const hunter=document.getElementById('sm-hunter').value;
   const signups=hunt.signups||[];
@@ -1275,18 +1275,18 @@ function saveSignup(){
   hunt.signups=filtered;
   if(!DB.hunts) DB.hunts={};
   DB.hunts[curHuntId]=hunt;
-  fbWrite(`hunts/${curHuntId}`, hunt);
-  closeModal('signup-modal'); renderHunts(); toast(`✓ ${hunter} tilmeldt`);
+  await fbWrite(`hunts/${curHuntId}`, hunt);
+  closeModal('signup-modal'); await loadHuntsFromFB(); toast(`✓ ${hunter} tilmeldt`);
 }
 
-function removeSignup(){
+async function removeSignup(){
   const hunt=hunts.find(h=>h.id===curHuntId); if(!hunt)return;
   const hunter=document.getElementById('sm-hunter').value;
   hunt.signups=(hunt.signups||[]).filter(s=>s.hunter!==hunter);
   if(!DB.hunts) DB.hunts={};
   DB.hunts[curHuntId]=hunt;
-  fbWrite(`hunts/${curHuntId}`, hunt);
-  closeModal('signup-modal'); renderHunts(); toast(`✓ ${hunter} frameldt`);
+  await fbWrite(`hunts/${curHuntId}`, hunt);
+  closeModal('signup-modal'); await loadHuntsFromFB(); toast(`✓ ${hunter} frameldt`);
 }
 
 // ═══════════════════════════════════════════════════════════════
