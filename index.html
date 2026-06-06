@@ -818,24 +818,14 @@ async function initFirebase(){
     afterLogin();
   }
 
-  // Re-render whatever view is active with fresh data
+  // Re-render ALL views with fresh data
   if(currentUser){
+    var crown2=isAdmin()?' 👑':'';
+    document.getElementById('user-badge').textContent='👤 '+currentUser+crown2;
+    // Re-render active view
     var av=document.querySelector('.view.active');
-    if(av){
-      var avid=av.id.replace('v-','');
-      if(avid==='hjem') renderDashboard();
-      else if(avid==='torne') renderTorne();
-      else if(avid==='log') renderKills();
-      else if(avid==='jagt') renderHunts();
-      else if(avid==='stat') renderStats();
-      else if(avid==='admin') loadAndRenderAdmin();
-    } else {
-      renderDashboard();
-    }
-    if(document.getElementById('user-badge').textContent==='👤'){
-      var crown=isAdmin()?' 👑':'';
-      document.getElementById('user-badge').textContent='👤 '+currentUser+crown;
-    }
+    var avid=av?av.id.replace('v-',''):'hjem';
+    showView(avid);
   }
 
   saveCache();
