@@ -1199,47 +1199,92 @@ async function loadHuntsFromFB(){
 }
 
 async function initFirebase(){
-  toast('⏳ Henter data…');
-  await dbLoad();
+  // 1. Show offline cache immediately so app feels fast
+  const hadCache = loadOfflineCache();
+  if(hadCache){
+    syncStandsFromDB();
+    buildLoginSelect();
+    if(isAdmin()) document.getElementById('tab-admin').style.display='';
+    if(currentUser){
+      const crown=isAdmin()?' 👑':'';
+      document.getElementById('user-badge').textContent='👤 '+currentUser+crown;
+    }
+    renderDashboard(); // Show immediately from cache
+    toast('📦 Indlæser...');
+  } else {
+    toast('⏳ Henter data...');
+  }
+
+  // 2. Load all data in parallel
+  try{
+    const [dbRes, favRes, msgRes, areaRes, extraRes] = await Promise.all([
+      fetch(FB+'.json').catch(()=>null),
+      fetch(FB+'/favorites.json').catch(()=>null),
+      fetch(FB+'/adminMsg.json').catch(()=>null),
+      fetch(FB+'/areaPoints.json').catch(()=>null),
+      fetch(FB+'/extraAreas.json').catch(()=>null)
+    ]);
+
+    // Parse main DB
+    if(dbRes && dbRes.ok){
+      const d = await dbRes.json();
+      if(d && typeof d==='object'){
+        if(d.stands) DB.stands=d.stands;
+        if(d.kills)  DB.kills=d.kills;
+        if(d.hunts)  DB.hunts=d.hunts;
+        if(d.members) DB.members=d.members;
+        if(d.activity) DB.activity=d.activity;
+        if(d.nextStandId) DB.nextStandId=d.nextStandId;
+        if(d.chat) DB.chat=d.chat;
+        if(d.vagtplan) DB.vagtplan=d.vagtplan;
+        if(d.kvoter) DB.kvoter=d.kvoter;
+      }
+    }
+
+    // Parse extras
+    if(favRes && favRes.ok){ const d=await favRes.json(); if(d) DB.favorites=d; }
+    if(msgRes && msgRes.ok){ const d=await msgRes.json(); if(d) DB.adminMsg=d; }
+    if(areaRes && areaRes.ok){
+      const d=await areaRes.json();
+      if(d){ if(d.nord) nordPoints=d.nord; if(d.syd) sydPoints=d.syd; }
+    }
+    if(extraRes && extraRes.ok){ const d=await extraRes.json(); if(d&&typeof d==='object') extraAreas=d; }
+
+  } catch(e){ console.error('DB load fejl:', e.message); }
+
+  // 3. Setup defaults if empty
+  if(Object.keys(DB.stands||{}).length===0){
+    const defaultS={};
+    for(let i=1;i<=10;i++) defaultS[i]={id:i,name:'Torn '+i,lat:null,lng:null,booking:null};
+    DB.stands=defaultS; DB.nextStandId=11;
+    await fbWrite('stands',defaultS); await fbWrite('nextStandId',11);
+  }
+
+  // 4. Setup stands
+  if(!nordPoints) nordPoints=nord.map(p=>({lat:p[0],lng:p[1]}));
+  if(!sydPoints) sydPoints=syd.map(p=>({lat:p[0],lng:p[1]}));
+
+  const maxId = Math.max(0,...Object.keys(DB.stands||{}).map(Number));
+  if(maxId>=nextStandId) nextStandId=maxId+1;
+  if(DB.nextStandId && DB.nextStandId>nextStandId) nextStandId=DB.nextStandId;
+
+  // 5. Update UI
+  syncStandsFromDB();
   buildLoginSelect();
+  redrawAllAreas();
+  updateExtraAreaButtons();
   if(isAdmin()) document.getElementById('tab-admin').style.display='';
   if(currentUser){
     const crown=isAdmin()?' 👑':'';
     document.getElementById('user-badge').textContent='👤 '+currentUser+crown;
   }
 
-  const standsObj = DB.stands || {};
-  const standsCount = Object.keys(standsObj).length;
-  const killsCount = Object.keys(DB.kills||{}).length;
-  const huntsCount = Object.keys(DB.hunts||{}).length;
+  // 6. Save to offline cache
+  saveOfflineCache();
 
-  console.log(`DB indlæst: ${standsCount} torne, ${killsCount} nedlagte, ${huntsCount} jagter`);
-
-  if(standsCount === 0 && killsCount === 0 && huntsCount === 0){
-    console.log('Tom database — opretter 10 standard torne');
-    const defaultS={};
-    for(let i=1;i<=10;i++){
-      defaultS[i]={id:i,name:`Torn ${i}`,lat:null,lng:null,booking:null};
-    }
-    DB.stands=defaultS;
-    DB.nextStandId=11;
-    await fbWrite('stands', defaultS);
-    await fbWrite('nextStandId', 11);
-  }
-
-  await loadStandsFromFB();
-  if(DB.nextStandId && DB.nextStandId > nextStandId){
-    nextStandId = DB.nextStandId;
-  } else {
-    const maxId = Math.max(0, ...Object.keys(DB.stands||{}).map(Number));
-    if(maxId >= nextStandId) nextStandId = maxId + 1;
-  }
-  await loadKillsFromFB();
-  await loadHuntsFromFB();
-  await loadFavorites();
-  await loadAdminMsg();
-  await loadAreaPoints();
-  await loadExtraAreas();
+  // 7. Render dashboard fresh
+  renderDashboard();
+  toast('✅ Klar!');
   startPolling();
   // Live dashboard refresh every 30 seconds
   setInterval(()=>{
@@ -2318,55 +2363,56 @@ async function renderDashboard(){
   const el = document.getElementById('hjem-content');
   if(!el) return;
 
-  // Fetch weather for sunrise/sunset
-  let sunriseStr = '--:--', sunsetStr = '--:--', tempStr = '--', windStr = '--', windDeg = 0, weatherIcon = '🌤️';
+  // Show content immediately with placeholders
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const occupied = stands.filter(s=>s.booking);
+  const free = stands.filter(s=>s.lat && !s.booking);
+  const nextHunt = hunts.filter(h=>h.date>=today).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const latestKills = kills.slice(0,3);
+  const unreadCount = Object.values(DB.chat||{}).filter(m=>m.user!==currentUser&&!m.read).length;
+
+  // Render immediately without weather
+  renderDashboardContent(el, now, today, occupied, free, nextHunt, latestKills, unreadCount, '...', '--:--', '--:--', '--°C', '-- km/t', 0, '🌤️');
+  
+  // Load weather in background
+  loadWeatherForDashboard(el, now, today, occupied, free, nextHunt, latestKills, unreadCount);
+}
+
+async function loadWeatherForDashboard(el, now, today, occupied, free, nextHunt, latestKills, unreadCount){
+  let sunriseStr='--:--', sunsetStr='--:--', tempStr='--°C', windStr='-- km/t', windDeg=0, weatherIcon='🌤️', sunInfo='';
   try{
-    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=56.448&longitude=10.652&current=temperature_2m,windspeed_10m,winddirection_10m,weathercode&daily=sunrise,sunset&timezone=Europe%2FCopenhagen&forecast_days=1');
+    const controller = new AbortController();
+    const timeout = setTimeout(()=>controller.abort(), 5000);
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=56.448&longitude=10.652&current=temperature_2m,windspeed_10m,winddirection_10m,weathercode&daily=sunrise,sunset&timezone=Europe%2FCopenhagen&forecast_days=1', {signal: controller.signal});
+    clearTimeout(timeout);
     if(r.ok){
       const d = await r.json();
       const cur = d.current;
       const daily = d.daily;
       const fmtTime = t => t ? t.split('T')[1].substring(0,5) : '--:--';
-      sunriseStr = fmtTime(daily.sunrise?.[0]);
-      sunsetStr = fmtTime(daily.sunset?.[0]);
-      tempStr = Math.round(cur.temperature_2m) + '°C';
-      windStr = Math.round(cur.windspeed_10m) + ' km/t';
-      windDeg = cur.winddirection_10m || 0;
+      sunriseStr = fmtTime(daily.sunrise&&daily.sunrise[0]);
+      sunsetStr = fmtTime(daily.sunset&&daily.sunset[0]);
+      tempStr = Math.round(cur.temperature_2m)+'°C';
+      windStr = Math.round(cur.windspeed_10m)+' km/t';
+      windDeg = cur.winddirection_10m||0;
       const wicons = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',51:'🌦️',61:'🌧️',71:'🌨️',80:'🌦️',95:'⛈️'};
-      weatherIcon = wicons[cur.weathercode] || '🌤️';
+      weatherIcon = wicons[cur.weathercode]||'🌤️';
+      const nowMin = now.getHours()*60+now.getMinutes();
+      const srMin = sunriseStr!=='--:--'?parseInt(sunriseStr)*60+parseInt(sunriseStr.split(':')[1]):0;
+      const ssMin = sunsetStr!=='--:--'?parseInt(sunsetStr)*60+parseInt(sunsetStr.split(':')[1]):0;
+      if(nowMin<srMin){ const d2=srMin-nowMin; sunInfo='<span style="color:var(--gold)">Solopgang om '+(d2>60?Math.floor(d2/60)+'t ':'')+d2%60+'m</span>'; }
+      else if(nowMin<ssMin){ const d2=ssMin-nowMin; sunInfo='<span style="color:var(--text2)">Solnedgang om '+(d2>60?Math.floor(d2/60)+'t ':'')+d2%60+'m</span>'; }
+      else{ sunInfo='<span style="color:var(--text3)">Solen er nede</span>'; }
     }
-  } catch(e){}
-
-  // Time until sunrise/sunset
-  const now = new Date();
-  const nowMin = now.getHours()*60 + now.getMinutes();
-  const sunriseMin = sunriseStr!=='--:--' ? parseInt(sunriseStr)*60 + parseInt(sunriseStr.split(':')[1]) : 0;
-  const sunsetMin = sunsetStr!=='--:--' ? parseInt(sunsetStr)*60 + parseInt(sunsetStr.split(':')[1]) : 0;
+  } catch(e){ sunInfo='<span style="color:var(--text3)">Vejr utilgængeligt</span>'; }
   
-  let sunInfo = '';
-  if(nowMin < sunriseMin){
-    const diff = sunriseMin - nowMin;
-    sunInfo = `<span style="color:var(--gold)">Solopgang om ${diff} min</span>`;
-  } else if(nowMin < sunsetMin){
-    const diff = sunsetMin - nowMin;
-    sunInfo = `<span style="color:var(--text2)">Solnedgang om ${Math.floor(diff/60)}t ${diff%60}m</span>`;
-  } else {
-    sunInfo = `<span style="color:var(--text3)">Solen er nede</span>`;
-  }
+  renderDashboardContent(el, now, today, occupied, free, nextHunt, latestKills, unreadCount, sunInfo, sunriseStr, sunsetStr, tempStr, windStr, windDeg, weatherIcon);
+  setTimeout(startHuntTimer, 200);
+}
 
-  // Occupied stands
-  const occupied = stands.filter(s=>s.booking);
-  const free = stands.filter(s=>s.lat && !s.booking);
-
-  // Next hunt
-  const today = now.toISOString().split('T')[0];
-  const nextHunt = hunts.filter(h=>h.date>=today).sort((a,b)=>a.date.localeCompare(b.date))[0];
-
-  // Latest kills (last 3)
-  const latestKills = kills.slice(0,3);
-
-  // Unread messages
-  const unreadCount = Object.values(DB.chat||{}).filter(m=>m.user!==currentUser&&!m.read).length;
+function renderDashboardContent(el, now, today, occupied, free, nextHunt, latestKills, unreadCount, sunInfo, sunriseStr, sunsetStr, tempStr, windStr, windDeg, weatherIcon){
+  if(!el) return;
 
   el.innerHTML = `
     <!-- ADMIN BESKED -->
@@ -3422,6 +3468,8 @@ function saveOfflineCache(){
       hunts: DB.hunts||{},
       stands: DB.stands||{},
       chat: DB.chat||{},
+      members: DB.members||{},
+      adminMsg: DB.adminMsg||null,
       ts: Date.now()
     };
     localStorage.setItem('dystrup_cache', JSON.stringify(cache));
@@ -3433,23 +3481,19 @@ function loadOfflineCache(){
     const raw = localStorage.getItem('dystrup_cache');
     if(!raw) return false;
     const cache = JSON.parse(raw);
-    // Use cache if less than 1 hour old
-    if(Date.now() - cache.ts > 3600000) return false;
+    if(Date.now() - cache.ts > 7200000) return false; // 2 hours
     if(cache.kills) DB.kills = cache.kills;
     if(cache.hunts) DB.hunts = cache.hunts;
     if(cache.stands) DB.stands = cache.stands;
     if(cache.chat) DB.chat = cache.chat;
-    console.log('📦 Offline cache loaded');
+    if(cache.members) DB.members = cache.members;
+    if(cache.adminMsg) DB.adminMsg = cache.adminMsg;
+    console.log('📦 Cache loaded');
     return true;
   } catch(e){ return false; }
 }
 
-// Save cache after every Firebase load
-const _origDbLoad = dbLoad;
-async function dbLoad(){
-  await _origDbLoad();
-  saveOfflineCache();
-}
+// Cache saved after initFirebase
 
 // ═══════════════════════════════════════════════════════════════
 // JAGT PÅMINDELSER
