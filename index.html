@@ -11,7 +11,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lora:wght@400;600&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -86,7 +85,7 @@ nav.hidden{transform:translateY(100%);}
 .toast-el{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(15,26,15,.96);color:var(--gold);padding:10px 22px;border-radius:28px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;box-shadow:0 8px 30px rgba(0,0,0,.5),0 0 0 1px rgba(212,168,67,.2);backdrop-filter:blur(16px);white-space:nowrap;}
 
 /* MAP */
-#map{width:100%;z-index:1;background:#1a2a1a;}
+#map{width:100%;height:calc(100vh - 52px - 62px);z-index:1;background:#1a2a1a;}
 .tm{background:var(--gold);border:2px solid rgba(0,0,0,.4);border-radius:20px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:var(--bg);font-family:var(--fp),serif;padding:4px 8px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4);}
 .tm.bk{background:var(--pink);}
 .tm.sel{background:var(--gold2);box-shadow:0 0 0 3px white,0 2px 8px rgba(0,0,0,.4);}
@@ -177,7 +176,7 @@ nav::-webkit-scrollbar{display:none;}
 
 <!-- KORT -->
 <div class="view" id="v-kort">
-  <div style="position:relative;width:100%;flex:1;">
+  <div style="position:relative;width:100%;">
     <div id="map"></div>
     <div id="lp">
       <div id="lp-h" onclick="toggleLP()">🗺️ Kortlag <span id="lp-t">−</span></div>
@@ -881,6 +880,7 @@ async function initFirebase(){
 let lOSM, lTop, map;
 function initMap(){
   if(map) return;
+  if(typeof L === 'undefined'){ toast('⚠️ Kortbibliotek ikke indlæst - tjek internetforbindelse'); return; }
   lOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19});
   lTop = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17});
   map  = L.map('map',{layers:[lOSM],zoomControl:false});
@@ -1273,11 +1273,7 @@ function showView(v){
   if(v==='stat')   renderStats();
   if(v==='admin'){ loadAndRenderAdmin(); }
   if(v==='kort'){
-    var mapDiv = document.getElementById('map');
-    // Set EXACT pixel height = window height minus header(52) minus nav(62)
-    var h = window.innerHeight - 52 - 62;
-    mapDiv.style.height = h + 'px';
-    mapDiv.style.width = document.getElementById('v-kort').offsetWidth + 'px';
+    // CSS calc handles map height
     if(!map){
       initMap();
       initMapLayers();
@@ -2334,5 +2330,6 @@ function startPolling(){
 // ── START ────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', initFirebase);
 </script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
 </html>
