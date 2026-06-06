@@ -88,11 +88,11 @@ main{flex:1;overflow:hidden;position:relative;padding-bottom:62px;transition:pad
 #tp .cpanel-body{overflow-y:auto;flex:1;}
 #tp.coll{width:auto;}
 
-.si{display:flex;align-items:center;gap:8px;padding:9px 7px;border-radius:8px;margin-bottom:5px;border:1px solid transparent;transition:background .15s;}
+.si{display:flex;align-items:center;gap:10px;padding:14px 10px;border-radius:14px;margin-bottom:8px;border:1px solid transparent;transition:all .2s;}
 .si:hover{background:var(--bg3);}
 .si.sel{background:var(--bg3);border-color:var(--gold);}
 .si.booked{background:#1a0a1a;}
-.snum{width:30px;height:30px;background:var(--gold);color:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;font-family:'Playfair Display',serif;}
+.snum{width:38px;height:38px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0;font-family:'Playfair Display',serif;box-shadow:0 2px 8px rgba(212,168,67,0.3);}
 .si.booked .snum{background:var(--pink);}
 .si.unp .snum{background:#3a3a3a;color:#777;}
 .sinfo{flex:1;overflow:hidden;cursor:pointer;}
@@ -111,7 +111,7 @@ main{flex:1;overflow:hidden;position:relative;padding-bottom:62px;transition:pad
 .ei:focus{outline:none;border-color:var(--gold2);}
 .sel-input{width:100%;padding:7px 10px;background:var(--bg);border:1px solid #3a5a3a;border-radius:6px;color:var(--text);font-family:'Lora',serif;font-size:13px;margin-bottom:6px;}
 .erow{display:flex;gap:6px;}
-.btn{border:none;border-radius:7px;padding:9px 12px;font-family:'Lora',serif;font-size:13px;cursor:pointer;font-weight:600;flex:1;}
+.btn{border:none;border-radius:12px;padding:14px 12px;font-family:'Lora',serif;font-size:15px;cursor:pointer;font-weight:600;flex:1;}
 .bg{background:linear-gradient(135deg,var(--gold) 0%,var(--gold2) 100%);color:var(--bg);box-shadow:0 4px 15px rgba(212,168,67,0.3);} .bg:hover{background:linear-gradient(135deg,var(--gold2) 0%,var(--gold) 100%);box-shadow:0 6px 20px rgba(212,168,67,0.4);}
 .bp{background:#6a1880;color:#f0d0ff;} .bp:hover{background:#8a28a0;}
 .br{background:var(--red2);color:#f4d0d0;} .br:hover{background:var(--red);}
@@ -132,13 +132,13 @@ main{flex:1;overflow:hidden;position:relative;padding-bottom:62px;transition:pad
 #v-log,#v-jagt,#v-stat,#v-admin{flex-direction:column;}
 .view-inner{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch;}
 .view-header{padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:linear-gradient(180deg,rgba(22,35,22,0.5) 0%,transparent 100%);}
-.view-header h2{font-family:'Playfair Display',serif;font-size:20px;color:var(--gold);}
+.view-header h2{font-family:'Playfair Display',serif;font-size:22px;color:var(--gold);}
 .btn-add{background:linear-gradient(135deg,var(--green2),var(--green3));border:1px solid rgba(61,122,82,0.5);border-radius:20px;color:var(--text);padding:9px 18px;font-family:'Lora',serif;font-size:13px;cursor:pointer;box-shadow:0 4px 12px rgba(30,74,46,0.4);}
 .btn-add:hover{background:var(--green);}
 
 .card{background:linear-gradient(135deg,var(--bg2) 0%,var(--bg3) 100%);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow2);position:relative;overflow:hidden;}.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,0.3),transparent);}
-.card-title{font-family:'Playfair Display',serif;font-size:16px;color:var(--gold);margin-bottom:5px;}
-.card-meta{font-size:13px;color:var(--text2);margin-bottom:7px;}
+.card-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold);margin-bottom:6px;}
+.card-meta{font-size:14px;color:var(--text2);margin-bottom:8px;}
 .card-meta span{margin-right:12px;}
 .card-note{font-size:12px;color:var(--text3);font-style:italic;}
 .tag{display:inline-block;background:rgba(22,35,22,0.8);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:11px;color:var(--text2);margin-right:4px;margin-bottom:3px;backdrop-filter:blur(4px);}
@@ -149,9 +149,9 @@ main{flex:1;overflow:hidden;position:relative;padding-bottom:62px;transition:pad
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:3000;display:none;align-items:flex-end;justify-content:center;}
 .modal-overlay.open{display:flex;}
 .modal{background:linear-gradient(180deg,var(--bg3) 0%,var(--bg2) 100%);border:1px solid rgba(212,168,67,0.4);border-radius:28px 28px 0 0;padding:24px 20px;width:100%;max-width:520px;max-height:90dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 -8px 40px rgba(0,0,0,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);}
-.modal h3{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.modal h3{font-family:'Playfair Display',serif;font-size:20px;color:var(--gold);margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border);}
 .field{margin-bottom:14px;}
-.field label{display:block;font-size:11px;color:var(--text3);margin-bottom:5px;letter-spacing:.5px;text-transform:uppercase;}
+.field label{display:block;font-size:12px;color:var(--text3);margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase;}
 .field input,.field select,.field textarea{width:100%;padding:13px 15px;background:rgba(8,15,8,0.5);border:1px solid rgba(212,168,67,0.15);border-radius:12px;color:var(--text);font-family:'Lora',serif;font-size:16px;}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--gold);}
 .field textarea{min-height:70px;resize:vertical;}
@@ -386,13 +386,15 @@ main{flex:1;overflow:hidden;position:relative;padding-bottom:62px;transition:pad
   </div>
 
   <!-- AREA EDIT BAR -->
-<div id="area-edit-bar" style="display:none;position:absolute;top:0;left:0;right:0;z-index:1001;background:rgba(170,24,160,0.15);backdrop-filter:blur(12px);border-bottom:1px solid rgba(170,24,160,0.5);padding:10px 12px;display:none;align-items:center;justify-content:space-between;gap:8px;">
-  <div style="font-size:13px;color:#f0b0e0;font-family:'Playfair Display',serif;">✏️ <span id="area-edit-name"></span></div>
-  <div style="display:flex;gap:6px;">
-    <button onclick="resetAreaToDefault()" style="padding:6px 10px;background:rgba(100,20,100,0.5);border:1px solid #aa18a0;border-radius:8px;color:#f0b0e0;font-size:11px;cursor:pointer;">↩ Nulstil</button>
-    <button onclick="stopAreaEdit(false)" style="padding:6px 10px;background:rgba(50,50,50,0.5);border:1px solid #555;border-radius:8px;color:#aaa;font-size:11px;cursor:pointer;">Annuller</button>
-    <button onclick="saveAreaEdit()" style="padding:6px 10px;background:rgba(170,24,160,0.6);border:1px solid #dd60cc;border-radius:8px;color:white;font-size:12px;font-weight:700;cursor:pointer;">💾 Gem</button>
+<div id="area-edit-bar" style="display:none;position:absolute;top:0;left:0;right:0;z-index:1001;background:rgba(10,5,15,0.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(200,80,200,0.4);padding:10px 12px;align-items:center;flex-wrap:wrap;gap:8px;">
+  <div style="font-size:14px;color:#f0b0e0;font-family:'Playfair Display',serif;flex:1;">✏️ <span id="area-edit-name"></span></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+    <button onclick="addAreaPointFromButton()" style="padding:8px 12px;background:rgba(60,180,60,0.3);border:1px solid #60c060;border-radius:10px;color:#a0f0a0;font-size:12px;cursor:pointer;">＋ Punkt</button>
+    <button onclick="resetAreaToDefault()" style="padding:8px 12px;background:rgba(100,20,100,0.4);border:1px solid #aa18a0;border-radius:10px;color:#f0b0e0;font-size:12px;cursor:pointer;">↩ Nulstil</button>
+    <button onclick="stopAreaEdit()" style="padding:8px 12px;background:rgba(50,50,50,0.4);border:1px solid #555;border-radius:10px;color:#aaa;font-size:12px;cursor:pointer;">✕</button>
+    <button onclick="saveAreaEdit()" style="padding:8px 14px;background:linear-gradient(135deg,#aa18a0,#dd60cc);border:none;border-radius:10px;color:white;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(170,24,160,0.4);">💾 Gem</button>
   </div>
+  <div style="width:100%;font-size:11px;color:rgba(240,176,224,0.6);">Træk lilla punkter • Dobbelttryk for at slette • ＋ Punkt tilføjer i midten</div>
 </div>
 
 <div id="mb">📍 Klik på kortet – <span id="pn"></span></div>
@@ -2377,13 +2379,12 @@ async function renderDashboard(){
 // ═══════════════════════════════════════════════════════════════
 // JAGTAREAL EDITOR
 // ═══════════════════════════════════════════════════════════════
-let editingArea = null; // 'nord' or 'syd'
+let editingArea = null;
 let editMarkers = [];
 let editPolygon = null;
 let nordPoints = null;
 let sydPoints = null;
 
-// Load saved area points from Firebase or use defaults
 async function loadAreaPoints(){
   try{
     const r = await fetch(FB+'/areaPoints.json');
@@ -2393,157 +2394,128 @@ async function loadAreaPoints(){
       if(d && d.syd) sydPoints = d.syd;
     }
   } catch(e){}
-  // Use defaults if not saved
   if(!nordPoints) nordPoints = nord.map(p=>({lat:p[0],lng:p[1]}));
   if(!sydPoints) sydPoints = syd.map(p=>({lat:p[0],lng:p[1]}));
-  // Redraw polygons with saved points
   redrawAreas();
 }
 
 function redrawAreas(){
-  // Remove old polygons
   ag.clearLayers();
   const aStyle={color:'#aa18a0',weight:2.5,fillColor:'#dd60cc',fillOpacity:0.28};
-  const nordLatLngs = nordPoints.map(p=>[p.lat,p.lng]);
-  const sydLatLngs = sydPoints.map(p=>[p.lat,p.lng]);
-  L.polygon(nordLatLngs,aStyle).bindTooltip('Nordstykket',{permanent:true,direction:'center',className:'att'}).addTo(ag);
-  L.polygon(sydLatLngs,aStyle).bindTooltip('Sydstykket',{permanent:true,direction:'center',className:'att'}).addTo(ag);
+  L.polygon(nordPoints.map(p=>[p.lat,p.lng]),aStyle)
+    .bindTooltip('Nordstykket',{permanent:true,direction:'center',className:'att'}).addTo(ag);
+  L.polygon(sydPoints.map(p=>[p.lat,p.lng]),aStyle)
+    .bindTooltip('Sydstykket',{permanent:true,direction:'center',className:'att'}).addTo(ag);
 }
 
 function startAreaEdit(area){
   if(!isAdmin()){ toast('⛔ Kun administrator kan redigere jagtareal'); return; }
   
-  editingArea = area;
-  stopAreaEdit(false);
+  // Clear any existing edit
+  clearEditMarkers();
   editingArea = area;
   
   const points = area === 'nord' ? nordPoints : sydPoints;
   
-  document.getElementById('area-edit-bar').style.display = 'flex';
+  // Show edit bar
+  const bar = document.getElementById('area-edit-bar');
+  bar.style.display = 'flex';
   document.getElementById('area-edit-name').textContent = area === 'nord' ? 'Nordstykket' : 'Sydstykket';
   
-  // Disable map dragging while editing
+  // Disable map movement
   map.dragging.disable();
   map.touchZoom.disable();
+  map.scrollWheelZoom.disable();
   map.doubleClickZoom.disable();
   
-  // Add draggable markers using Leaflet's built-in dragging
-  points.forEach((p, i) => {
-    const m = L.marker([p.lat, p.lng], {
-      draggable: true,
-      icon: L.divIcon({
-        className: '',
-        html: '<div style="width:24px;height:24px;background:#dd60cc;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:grab;margin:-12px 0 0 -12px;"></div>',
-        iconSize: [24,24],
-        iconAnchor: [12,12]
-      })
-    }).addTo(map);
-    
-    m.on('drag', function(e){
-      points[i] = {lat: e.latlng.lat, lng: e.latlng.lng};
-      updateEditPolygon();
-    });
-    
-    m.on('dblclick', function(e){
-      L.DomEvent.stop(e);
-      if(points.length > 3){
-        points.splice(i, 1);
-        refreshEditMarkers(area);
-      } else {
-        toast('Minimum 3 punkter');
-      }
-    });
-    
-    editMarkers.push(m);
-  });
+  // Add draggable markers
+  points.forEach((p, i) => addEditMarker(p, i, points));
   
   updateEditPolygon();
-  
-  // Add new point by long press on map - use contextmenu as fallback
-  map.on('contextmenu', addAreaPoint);
   
   // Collapse kortlag
   const lp = document.getElementById('lp');
   if(!lp.classList.contains('coll')) toggleP('lp');
   
   toast('✏️ Træk de lilla punkter for at flytte dem');
-
 }
 
-function refreshEditMarkers(area){
+function addEditMarker(p, i, points){
+  const m = L.marker([p.lat, p.lng], {
+    draggable: true,
+    icon: L.divIcon({
+      className: '',
+      html: '<div style="width:28px;height:28px;background:linear-gradient(135deg,#dd60cc,#aa18a0);border:3px solid white;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.5);cursor:grab;"></div>',
+      iconSize: [28,28],
+      iconAnchor: [14,14]
+    })
+  }).addTo(map);
+  
+  m.on('drag', function(e){
+    points[i] = {lat: e.latlng.lat, lng: e.latlng.lng};
+    updateEditPolygon();
+  });
+  
+  m.on('dblclick', function(e){
+    L.DomEvent.stop(e);
+    if(points.length > 3){
+      points.splice(i, 1);
+      clearEditMarkers();
+      points.forEach((p2, i2) => addEditMarker(p2, i2, points));
+      updateEditPolygon();
+      toast('🗑 Punkt slettet');
+    } else {
+      toast('Minimum 3 punkter');
+    }
+  });
+  
+  editMarkers.push(m);
+}
+
+function clearEditMarkers(){
   editMarkers.forEach(m => map.removeLayer(m));
   editMarkers = [];
   if(editPolygon){ map.removeLayer(editPolygon); editPolygon = null; }
-  editingArea = area;
-  // Re-add markers
-  const points = area === 'nord' ? nordPoints : sydPoints;
-  points.forEach((p, i) => {
-    const m = L.marker([p.lat, p.lng], {
-      draggable: true,
-      icon: L.divIcon({
-        className: '',
-        html: '<div style="width:24px;height:24px;background:#dd60cc;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:grab;margin:-12px 0 0 -12px;"></div>',
-        iconSize: [24,24],
-        iconAnchor: [12,12]
-      })
-    }).addTo(map);
-    m.on('drag', function(e){
-      points[i] = {lat: e.latlng.lat, lng: e.latlng.lng};
-      updateEditPolygon();
-    });
-    m.on('dblclick', function(e){
-      L.DomEvent.stop(e);
-      if(points.length > 3){
-        points.splice(i, 1);
-        refreshEditMarkers(area);
-      }
-    });
-    editMarkers.push(m);
-  });
-  updateEditPolygon();
 }
 
 function updateEditPolygon(){
   if(editPolygon) map.removeLayer(editPolygon);
   const points = editingArea === 'nord' ? nordPoints : sydPoints;
-  const latlngs = points.map(p=>[p.lat, p.lng]);
-  editPolygon = L.polygon(latlngs, {
-    color:'#ff40ff', weight:2, fillColor:'#ff40ff', fillOpacity:0.15,
-    dashArray:'6,4'
+  editPolygon = L.polygon(points.map(p=>[p.lat,p.lng]), {
+    color:'#ff60ff', weight:2, fillColor:'#ff60ff', fillOpacity:0.1, dashArray:'6,4'
   }).addTo(map);
+}
+
+function addAreaPointFromButton(){
+  // Get map center and add point there
+  if(!editingArea) return;
+  const center = map.getCenter();
+  const points = editingArea === 'nord' ? nordPoints : sydPoints;
+  points.push({lat: center.lat, lng: center.lng});
+  clearEditMarkers();
+  points.forEach((p, i) => addEditMarker(p, i, points));
+  updateEditPolygon();
+  toast('📍 Nyt punkt tilføjet i midten - træk det på plads');
 }
 
 async function saveAreaEdit(){
   if(!editingArea) return;
-  const points = editingArea === 'nord' ? nordPoints : sydPoints;
-  
-  // Save to Firebase
-  const saveData = {
-    nord: nordPoints,
-    syd: sydPoints
-  };
-  await fbWrite('areaPoints', saveData);
-  
-  stopAreaEdit(true);
+  await fbWrite('areaPoints', {nord: nordPoints, syd: sydPoints});
+  const aname = editingArea === 'nord' ? 'Nordstykket' : 'Sydstykket';
+  stopAreaEdit();
   redrawAreas();
-  toast('✅ Jagtareal gemt!');
-  logActivity(currentUser + ' opdaterede ' + (editingArea==='nord'?'Nordstykket':'Sydstykket'));
+  toast('✅ ' + aname + ' gemt!');
+  logActivity(currentUser + ' opdaterede jagtareal');
 }
 
-function stopAreaEdit(save){
-  map.off('click', addAreaPoint);
-  map.off('contextmenu', addAreaPoint);
-  editMarkers.forEach(m => map.removeLayer(m));
-  editMarkers = [];
-  if(editPolygon){ map.removeLayer(editPolygon); editPolygon = null; }
-  // Re-enable map interaction
+function stopAreaEdit(){
+  clearEditMarkers();
   map.dragging.enable();
   map.touchZoom.enable();
+  map.scrollWheelZoom.enable();
   map.doubleClickZoom.enable();
-  map.getContainer().style.cursor = '';
   document.getElementById('area-edit-bar').style.display = 'none';
   editingArea = null;
-  if(!save) redrawAreas();
 }
 
 function resetAreaToDefault(){
@@ -2551,12 +2523,14 @@ function resetAreaToDefault(){
     nordPoints = nord.map(p=>({lat:p[0],lng:p[1]}));
     sydPoints = syd.map(p=>({lat:p[0],lng:p[1]}));
     fbWrite('areaPoints', {nord: nordPoints, syd: sydPoints});
-    stopAreaEdit(true);
+    stopAreaEdit();
     redrawAreas();
     toast('↩ Jagtareal nulstillet');
   });
 }
 
+// ═══════════════════════════════════════════════════════════════
+// GPS POSITION
 // ═══════════════════════════════════════════════════════════════
 // GPS POSITION
 // ═══════════════════════════════════════════════════════════════
