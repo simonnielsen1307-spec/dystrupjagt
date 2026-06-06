@@ -85,7 +85,7 @@ nav.hidden{transform:translateY(100%);}
 .toast-el{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(15,26,15,.96);color:var(--gold);padding:10px 22px;border-radius:28px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;box-shadow:0 8px 30px rgba(0,0,0,.5),0 0 0 1px rgba(212,168,67,.2);backdrop-filter:blur(16px);white-space:nowrap;}
 
 /* MAP */
-#map{width:100%;height:100%;z-index:1;}
+#map{position:absolute;top:0;left:0;right:0;bottom:0;z-index:1;background:#1a2a1a;}
 .tm{background:var(--gold);border:2px solid rgba(0,0,0,.4);border-radius:20px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:var(--bg);font-family:var(--fp),serif;padding:4px 8px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4);}
 .tm.bk{background:var(--pink);}
 .tm.sel{background:var(--gold2);box-shadow:0 0 0 3px white,0 2px 8px rgba(0,0,0,.4);}
@@ -176,7 +176,7 @@ nav::-webkit-scrollbar{display:none;}
 
 <!-- KORT -->
 <div class="view" id="v-kort">
-  <div style="position:relative;flex:1;overflow:hidden;">
+  <div style="position:relative;flex:1;overflow:hidden;min-height:0;height:100%;">
     <div id="map"></div>
     <div id="lp">
       <div id="lp-h" onclick="toggleLP()">🗺️ Kortlag <span id="lp-t">−</span></div>
@@ -508,10 +508,13 @@ nav::-webkit-scrollbar{display:none;}
 </div></div>
 
 <!-- Søgning -->
-<div class="overlay" id="search-modal">
-<div class="modal">
-  <input type="text" id="search-input" placeholder="🔍 Søg overalt..." oninput="doSearch()" style="width:100%;padding:13px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:var(--fl),serif;font-size:16px;margin-bottom:14px;">
-  <div id="search-results"></div>
+<div class="overlay" id="search-modal" onclick="closeModal('search-modal')">
+<div class="modal" onclick="event.stopPropagation()">
+  <div style="display:flex;gap:8px;margin-bottom:14px;">
+    <input type="text" id="search-input" placeholder="🔍 Søg overalt..." oninput="doSearch()" style="flex:1;padding:13px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:var(--fl),serif;font-size:16px;">
+    <button onclick="closeModal('search-modal')" style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:14px;color:var(--text);font-size:14px;cursor:pointer;">✕</button>
+  </div>
+  <div id="search-results"><div class="empty">Skriv for at søge...</div></div>
 </div></div>
 
 <!-- Bekræft modal -->
@@ -554,6 +557,7 @@ const ANIMAL_EMOJI = {
 // ── STATE ────────────────────────────────────────────────────────
 let DB = { stands:{}, kills:{}, hunts:{}, members:{}, chat:{}, activity:[], vagtplan:{}, kvoter:{} };
 let stands = [], kills = [], hunts = [];
+let firebaseLoaded = false;
 let nextStandId = 11;
 let currentUser = null;
 let activeChatChannel = 'alle';
@@ -802,6 +806,7 @@ async function initFirebase(){
   else if(maxId>=nextStandId) nextStandId=maxId+1;
 
   // 6. Populate all arrays from fresh Firebase data
+  firebaseLoaded = true;
   stands=[];
   populateArrays();
   buildLoginSelect();
@@ -1255,7 +1260,12 @@ function showView(v){
   if(v==='kvoter'){ renderKvoter(); if(isAdmin()) document.getElementById('kvote-add-btn').style.display=''; }
   if(v==='stat')   renderStats();
   if(v==='admin'){ loadAndRenderAdmin(); }
-  if(v==='kort')   setTimeout(()=>map.invalidateSize(),200);
+  if(v==='kort'){
+    // Call multiple times to ensure map renders correctly on iOS
+    map.invalidateSize();
+    setTimeout(function(){map.invalidateSize();},100);
+    setTimeout(function(){map.invalidateSize();},500);
+  }
 }
 
 function toggleMore(){
@@ -1485,7 +1495,10 @@ async function loadWeather(){
 function renderTorne(){
   const el=document.getElementById('torne-list');
   if(!el) return;
-  if(!stands.length){el.innerHTML='<div class="empty">Ingen torne. Tryk ＋ for at tilføje.</div>';return;}
+  if(!stands.length){
+    el.innerHTML='<div class="empty">'+(firebaseLoaded?'Ingen torne. Tryk ＋ for at tilføje.':'🔄 Henter torne...')+'</div>';
+    return;
+  }
   const favs=DB.favorites||{};
   const sorted=[...stands].sort((a,b)=>{
     const af=favs[currentUser+'_'+a.id]?1:0, bf=favs[currentUser+'_'+b.id]?1:0;
@@ -1673,7 +1686,10 @@ function renderKills(){
   var ks=document.getElementById('kill-search'); var q=ks?ks.value.toLowerCase():'';
   let list=kills;
   if(q) list=kills.filter(k=>(k.hunter||'').toLowerCase().includes(q)||(k.animal||'').toLowerCase().includes(q)||(k.note||'').toLowerCase().includes(q));
-  if(!list.length){el.innerHTML='<div class="empty">'+(q?'Ingen resultater for "'+q+'"':'Ingen registreringer endnu.')+'</div>';return;}
+  if(!list.length){
+    el.innerHTML='<div class="empty">'+(q?'Ingen resultater for "'+q+'"':firebaseLoaded?'Ingen registreringer endnu.':'🔄 Henter skydelog...')+'</div>';
+    return;
+  }
   el.innerHTML=list.map(k=>{
     const ac=ANIMAL_COLORS[k.animal]||'var(--green)';
     const em=ANIMAL_EMOJI[k.animal]||'🎯';
@@ -1748,7 +1764,7 @@ function renderHunts(){
   const el=document.getElementById('hunt-list');
   if(!el) return;
   if(jagtView==='kalender'){renderKalender();return;}
-  if(!hunts.length){el.innerHTML='<div class="empty">Ingen jagter planlagt.</div>';return;}
+  if(!hunts.length){el.innerHTML='<div class="empty">'+(firebaseLoaded?'Ingen jagter planlagt.':'🔄 Henter jagter...')+'</div>';return;}
   const today=new Date().toISOString().split('T')[0];
   el.innerHTML=hunts.map(h=>{
     const past=h.date<today;
