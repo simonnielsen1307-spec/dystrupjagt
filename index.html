@@ -740,9 +740,7 @@ function afterLogin(){
 
 // ── INIT ─────────────────────────────────────────────────────────
 async function initFirebase(){
-  // 0. Initialize map
-  initMap();
-  initMapLayers();
+  // Map initialized lazily when kort view first opens
   setTimeout(startGPS,2000);
 
   // 1. Splash off after 1.2s
@@ -844,9 +842,11 @@ async function initFirebase(){
   startPolling();
   toast('✅ Klar!');
 
-  // 7. Map stands with markers
-  stands.forEach(function(s){ if(s.lat&&s.lng&&!s.marker) addMarker(s); });
-  renderStands();
+  // 7. Map stands - only add markers if map is initialized
+  if(map){
+    stands.forEach(function(s){ if(s.lat&&s.lng&&!s.marker) addMarker(s); });
+    renderStands();
+  }
 
   // 8. Event listeners - safe here, DOM is ready
   document.addEventListener('touchstart',()=>{ if(!navVisible) toggleNav(); },{passive:true});
@@ -942,6 +942,7 @@ function toggleLP(){
 
 // Area polygons
 function redrawAllAreas(){
+  if(!ag) return;
   ag.clearLayers();
   const pts=(nordPoints||nord.map(p=>({lat:p[0],lng:p[1]})));
   const spts=(sydPoints||syd.map(p=>({lat:p[0],lng:p[1]})));
@@ -977,6 +978,7 @@ function updateExtraAreaBtns(){
 
 
 function addMarker(s){
+  if(!map) return;
   s.marker=L.marker([s.lat,s.lng],{icon:mkIcon(s,false),draggable:true}).addTo(map);
   s.marker.on('click',()=>openCheckin(s.id));
   s.marker.on('dragend',e=>{
@@ -1005,8 +1007,7 @@ function placeTorn(id){
   const s=stands.find(x=>x.id===id);
   if(!s) return;
   placingStand=s;
-  showView('kort');
-  setTimeout(()=>map.invalidateSize(),200);
+  showView('kort'); // This will init map if needed
   document.getElementById('mb').style.display='block';
   document.getElementById('mb-name').textContent=s.name;
   map.getContainer().style.cursor='crosshair';
@@ -1015,10 +1016,11 @@ function placeTorn(id){
 function cancelPlace(){
   placingStand=null;
   document.getElementById('mb').style.display='none';
-  map.getContainer().style.cursor='';
+  if(map) map.getContainer().style.cursor='';
 }
 
 function findMe(){
+  if(!map){ showView('kort'); return; }
   if(!gpsMarker){ startGPS(); return; }
   map.setView(gpsMarker.getLatLng(),16,{animate:true});
 }
@@ -1032,6 +1034,7 @@ function startGPS(){
 
 function gpsPos(pos){
   const lat=pos.coords.latitude, lng=pos.coords.longitude;
+  if(!map) return; // Map not yet initialized
   if(!gpsMarker){
     const ic=L.divIcon({className:'',html:'<div style="position:relative;width:20px;height:20px;"><div style="position:absolute;inset:-8px;background:rgba(74,144,217,.2);border-radius:50%;animation:gpsPulse 2s ease-out infinite;"></div><div style="position:absolute;inset:0;background:#4a90d9;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.5);"></div></div>',iconSize:[20,20],iconAnchor:[10,10]});
     gpsMarker=L.marker([lat,lng],{icon:ic}).addTo(map);
@@ -1063,9 +1066,11 @@ function startAreaEdit(area){
   document.getElementById('area-bar-name').textContent=area==='nord'?'Nordstykket':area==='syd'?'Sydstykket':(extraAreas[area]||{}).name||area;
   map.dragging.disable(); map.touchZoom.disable(); map.scrollWheelZoom.disable();
 
-  points.forEach((p,i)=>addEditMarker(p,i,points));
-  updateEditPoly();
-  showView('kort');
+  showView('kort'); // Init map if needed first
+  setTimeout(function(){
+    points.forEach(function(p,i){addEditMarker(p,i,points);});
+    updateEditPoly();
+  }, map ? 0 : 200);
   const lp=document.getElementById('lp-b');
   if(lp.style.display!=='none') toggleLP();
   toast('✏️ Træk punkterne for at redigere');
@@ -1110,7 +1115,7 @@ function updateEditPoly(){
 }
 
 function addAreaPointCenter(){
-  if(!editingArea) return;
+  if(!editingArea||!map) return;
   const c=map.getCenter();
   let pts=editingArea==='nord'?nordPoints:editingArea==='syd'?sydPoints:(extraAreas[editingArea]||{}).points||[];
   pts.push({lat:c.lat,lng:c.lng});
@@ -1136,7 +1141,7 @@ function cancelAreaEdit(){
     map.dragging.enable();
     if(map.touchZoom) map.touchZoom.enable();
     if(map.scrollWheelZoom) map.scrollWheelZoom.enable();
-    map.off('click',drawNewAreaClick);
+    if(map) map.off('click',drawNewAreaClick);
   }
   var bar=document.getElementById('area-bar');
   if(bar) bar.style.display='none';
@@ -1196,9 +1201,15 @@ function beginDrawNewArea(){
   clearEditMarkers();
   document.getElementById('area-bar').style.display='flex';
   document.getElementById('area-bar-name').textContent='Tegner: '+newAreaName;
-  map.dragging.disable(); map.touchZoom.disable(); map.scrollWheelZoom.disable();
-  map.on('click',drawNewAreaClick);
-  showView('kort');
+  showView('kort'); // Init map if needed
+  setTimeout(function(){
+    if(map){
+      map.dragging.disable();
+      if(map.touchZoom) map.touchZoom.disable();
+      if(map.scrollWheelZoom) map.scrollWheelZoom.disable();
+      map.on('click',drawNewAreaClick);
+    }
+  }, map ? 0 : 300);
   const lp=document.getElementById('lp-b');
   if(lp.style.display!=='none') toggleLP();
   toast('Tryk på kortet for at tegne. Tryk Gem når færdig.');
@@ -1261,10 +1272,21 @@ function showView(v){
   if(v==='stat')   renderStats();
   if(v==='admin'){ loadAndRenderAdmin(); }
   if(v==='kort'){
-    // Call multiple times to ensure map renders correctly on iOS
-    map.invalidateSize();
-    setTimeout(function(){map.invalidateSize();},100);
-    setTimeout(function(){map.invalidateSize();},500);
+    if(!map){
+      // First time: initialize map NOW while container is visible
+      initMap();
+      initMapLayers();
+      setTimeout(function(){
+        map.invalidateSize();
+        redrawAllAreas();
+        stands.forEach(function(s){ if(s.lat&&s.lng&&!s.marker) addMarker(s); });
+        renderStands();
+      }, 50);
+    } else {
+      // Already initialized: just fix size
+      setTimeout(function(){map.invalidateSize();}, 50);
+      setTimeout(function(){map.invalidateSize();}, 300);
+    }
   }
 }
 
