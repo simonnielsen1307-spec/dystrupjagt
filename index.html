@@ -185,8 +185,12 @@ nav::-webkit-scrollbar{display:none;}
         <div class="lr"><input type="checkbox" id="c1"><label for="c1"><div class="ld" style="background:#b8d4a0;border:1px solid #4a7a38;"></div> Topokort</label></div>
         <div class="lr"><input type="checkbox" id="c4" checked><label for="c4"><div class="ld" style="background:rgba(200,60,160,.5);border:2px solid #a010a0;border-radius:50%;"></div> Jagtareal</label></div>
         <div class="lr"><input type="checkbox" id="c5" checked><label for="c5"><div class="ld" style="background:#4a90d9;border-radius:50%;"></div> Min position</label></div>
-        <div id="area-btns" style="margin-top:8px;display:flex;flex-direction:column;gap:5px;"></div>
-        <button onclick="startDrawNewArea()" style="width:100%;margin-top:6px;padding:7px;background:rgba(212,168,67,.1);border:1px dashed rgba(212,168,67,.4);border-radius:8px;color:var(--gold);font-size:11px;cursor:pointer;font-family:var(--fl),serif;">＋ Nyt jagtareal</button>
+        <div style="margin-top:8px;display:flex;gap:4px;">
+          <button onclick="startAreaEdit('nord')" style="flex:1;padding:6px;background:rgba(170,24,160,.2);border:1px solid #aa18a0;border-radius:7px;color:#f0b0e0;font-size:10px;cursor:pointer;">✏️ Nord</button>
+          <button onclick="startAreaEdit('syd')" style="flex:1;padding:6px;background:rgba(170,24,160,.2);border:1px solid #aa18a0;border-radius:7px;color:#f0b0e0;font-size:10px;cursor:pointer;">✏️ Syd</button>
+        </div>
+        <div id="area-btns" style="margin-top:4px;display:flex;flex-direction:column;gap:4px;"></div>
+        <button onclick="startDrawNewArea()" style="width:100%;margin-top:5px;padding:7px;background:rgba(212,168,67,.1);border:1px dashed rgba(212,168,67,.4);border-radius:8px;color:var(--gold);font-size:11px;cursor:pointer;">＋ Nyt areal</button>
       </div>
     </div>
     <div id="area-bar">
@@ -721,14 +725,13 @@ function doLogout(){
 }
 
 function afterLogin(){
-  const crown = isAdmin()?' 👑':'';
+  var crown = isAdmin()?' 👑':'';
   document.getElementById('user-badge').textContent='👤 '+currentUser+crown;
   if(isAdmin()){
     document.getElementById('tab-admin').style.display='';
     document.getElementById('kvote-add-btn').style.display='';
   }
   showView('hjem');
-  renderDashboard();
 }
 
 // ── INIT ─────────────────────────────────────────────────────────
@@ -757,6 +760,7 @@ async function initFirebase(){
     document.getElementById('app').classList.remove('hidden');
     buildLoginSelect();
     populateArrays();
+    // Show dashboard immediately from cache - don't wait for Firebase
     afterLogin();
     toast('📦 Opdaterer...');
   } else {
@@ -1022,9 +1026,12 @@ function gpsErr(e){
 // ── AREA EDITOR ──────────────────────────────────────────────────
 function startAreaEdit(area){
   if(!isAdmin()){ toast('⛔ Kun administrator'); return; }
+  // Ensure nordPoints/sydPoints are initialized
+  if(!nordPoints) nordPoints=nord.map(function(p){return {lat:p[0],lng:p[1]};});
+  if(!sydPoints) sydPoints=syd.map(function(p){return {lat:p[0],lng:p[1]};});
   clearEditMarkers();
   editingArea=area;
-  let points;
+  var points;
   if(area==='nord') points=nordPoints;
   else if(area==='syd') points=sydPoints;
   else points=(extraAreas[area]||{}).points||[];
@@ -1042,12 +1049,19 @@ function startAreaEdit(area){
 }
 
 function addEditMarker(p,i,points){
-  const m=L.marker([p.lat,p.lng],{
+  var m=L.marker([p.lat,p.lng],{
     draggable:true,
-    icon:L.divIcon({className:'',html:'<div style="width:24px;height:24px;background:#dd60cc;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:grab;"></div>',iconSize:[24,24],iconAnchor:[12,12]})
+    autoPan:true,
+    icon:L.divIcon({
+      className:'',
+      html:'<div style="width:32px;height:32px;background:#dd60cc;border:3px solid white;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.6);cursor:grab;display:flex;align-items:center;justify-content:center;"></div>',
+      iconSize:[32,32],
+      iconAnchor:[16,16]
+    })
   }).addTo(map);
-  m.on('drag',e=>{ points[i]={lat:e.latlng.lat,lng:e.latlng.lng}; updateEditPoly(); });
-  m.on('dblclick',e=>{ L.DomEvent.stop(e); if(points.length>3){points.splice(i,1);refreshEditMarkers();}else toast('Min. 3 punkter'); });
+  m.on('drag',function(e){ points[i]={lat:e.latlng.lat,lng:e.latlng.lng}; updateEditPoly(); });
+  m.on('dragend',function(e){ points[i]={lat:e.target.getLatLng().lat,lng:e.target.getLatLng().lng}; });
+  m.on('dblclick',function(e){ L.DomEvent.stop(e); if(points.length>3){points.splice(i,1);refreshEditMarkers();}else toast('Min. 3 punkter'); });
   editMarkers.push(m);
 }
 
@@ -1095,9 +1109,14 @@ async function saveAreaEdit(){
 function cancelAreaEdit(){
   clearEditMarkers();
   drawingNewArea=false; newAreaPoints=[];
-  map.dragging.enable(); map.touchZoom.enable(); map.scrollWheelZoom.enable();
-  map.off('click',drawNewAreaClick);
-  document.getElementById('area-bar').style.display='none';
+  if(map){
+    map.dragging.enable();
+    if(map.touchZoom) map.touchZoom.enable();
+    if(map.scrollWheelZoom) map.scrollWheelZoom.enable();
+    map.off('click',drawNewAreaClick);
+  }
+  var bar=document.getElementById('area-bar');
+  if(bar) bar.style.display='none';
   editingArea=null;
   redrawAllAreas();
 }
@@ -1208,7 +1227,7 @@ function showView(v){
   if(tab) tab.classList.add('active');
   if(!MAIN_TABS.includes(v)) document.getElementById('tab-mere').classList.add('active');
   // Load data
-  if(v==='hjem')   renderDashboard();
+  if(v==='hjem'){ renderDashboard(); }
   if(v==='torne')  renderTorne();
   if(v==='log')    renderKills();
   if(v==='jagt')   renderHunts();
@@ -1389,7 +1408,16 @@ function renderDashboard(){
   h+='<button onclick="renderDashboard()" style="width:100%;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;color:var(--text3);font-size:13px;cursor:pointer;margin-bottom:20px;">🔄 Opdater</button>';
 
   el.innerHTML=h;
-  loadWeather();
+  // Load weather async - show from cache first if available
+  try{
+    var wc=localStorage.getItem('dj_weather');
+    if(wc){
+      var wcd=JSON.parse(wc);
+      var wel=document.getElementById('dash-weather');
+      if(wel && wcd.html) wel.innerHTML=wcd.html;
+    }
+  }catch(e){}
+  setTimeout(loadWeather, 100);
 }
 
 // Weather
@@ -2194,34 +2222,43 @@ async function rydGamleData(){
 
 // ── POLLING ──────────────────────────────────────────────────────
 function startPolling(){
-  // Poll chat every 5s
-  setInterval(async()=>{
-    try{
-      const r=await fetch(FB+'/chat.json');
+  // Poll chat every 6s
+  setInterval(function(){
+    fetch(FB+'/chat.json').then(function(r){
       if(!r.ok) return;
-      const d=await r.json();
-      if(!d||JSON.stringify(d)===JSON.stringify(DB.chat)) return;
+      return r.json();
+    }).then(function(d){
+      if(!d) return;
+      var changed = JSON.stringify(d)!==JSON.stringify(DB.chat);
+      if(!changed) return;
       DB.chat=d;
-      const unread=Object.values(d).filter(m=>m.user!==currentUser&&!m.read).length;
-      const badge=document.getElementById('chat-badge');
-      const onChat=document.getElementById('v-chat').classList.contains('active');
+      var unread=Object.values(d).filter(function(m){return m.user!==currentUser&&!m.read;}).length;
+      var badge=document.getElementById('chat-badge');
+      var onChat=document.getElementById('v-chat').classList.contains('active');
       if(badge){ badge.style.display=unread>0&&!onChat?'flex':'none'; if(unread>0) badge.textContent=unread; }
       if(onChat){buildChatTabs();renderChat();}
-    }catch(e){}
-  },5000);
-  // Poll stands every 15s
-  setInterval(async()=>{
-    try{
-      const r=await fetch(FB+'/stands.json');
-      if(!r.ok) return;
-      const d=await r.json();
+    }).catch(function(){});
+  },6000);
+  // Poll stands every 20s
+  setInterval(function(){
+    fetch(FB+'/stands.json').then(function(r){
+      return r.ok?r.json():null;
+    }).then(function(d){
       if(!d) return;
       DB.stands=d;
-      populateArrays();
-      if(document.getElementById('v-torne').classList.contains('active')) renderTorne();
-      if(document.getElementById('v-hjem').classList.contains('active')) renderDashboard();
-    }catch(e){}
-  },15000);
+      var wasChanged=false;
+      Object.values(d).forEach(function(s){
+        var ex=stands.find(function(e){return e.id===s.id;});
+        if(ex&&JSON.stringify(ex.booking)!==JSON.stringify(s.booking)){
+          ex.booking=s.booking; updMarker(ex); wasChanged=true;
+        }
+      });
+      if(wasChanged){
+        if(document.getElementById('v-torne').classList.contains('active')) renderTorne();
+        if(document.getElementById('v-hjem').classList.contains('active')) renderDashboard();
+      }
+    }).catch(function(){});
+  },20000);
 }
 
 
