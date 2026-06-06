@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Dystrup">
 <title>Dystrup Jagtkonsortet</title>
@@ -85,7 +86,7 @@ nav.hidden{transform:translateY(100%);}
 .toast-el{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(15,26,15,.96);color:var(--gold);padding:10px 22px;border-radius:28px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;box-shadow:0 8px 30px rgba(0,0,0,.5),0 0 0 1px rgba(212,168,67,.2);backdrop-filter:blur(16px);white-space:nowrap;}
 
 /* MAP */
-#map{position:absolute;top:0;left:0;right:0;bottom:0;z-index:1;background:#1a2a1a;}
+#map{width:100%;z-index:1;background:#1a2a1a;}
 .tm{background:var(--gold);border:2px solid rgba(0,0,0,.4);border-radius:20px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:var(--bg);font-family:var(--fp),serif;padding:4px 8px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4);}
 .tm.bk{background:var(--pink);}
 .tm.sel{background:var(--gold2);box-shadow:0 0 0 3px white,0 2px 8px rgba(0,0,0,.4);}
@@ -176,7 +177,7 @@ nav::-webkit-scrollbar{display:none;}
 
 <!-- KORT -->
 <div class="view" id="v-kort">
-  <div style="position:relative;flex:1;overflow:hidden;min-height:0;height:100%;">
+  <div style="position:relative;width:100%;flex:1;">
     <div id="map"></div>
     <div id="lp">
       <div id="lp-h" onclick="toggleLP()">🗺️ Kortlag <span id="lp-t">−</span></div>
@@ -1272,20 +1273,22 @@ function showView(v){
   if(v==='stat')   renderStats();
   if(v==='admin'){ loadAndRenderAdmin(); }
   if(v==='kort'){
+    var mapDiv = document.getElementById('map');
+    // Set EXACT pixel height = window height minus header(52) minus nav(62)
+    var h = window.innerHeight - 52 - 62;
+    mapDiv.style.height = h + 'px';
+    mapDiv.style.width = document.getElementById('v-kort').offsetWidth + 'px';
     if(!map){
-      // First time: initialize map NOW while container is visible
       initMap();
       initMapLayers();
       setTimeout(function(){
-        map.invalidateSize();
+        map.invalidateSize(true);
         redrawAllAreas();
         stands.forEach(function(s){ if(s.lat&&s.lng&&!s.marker) addMarker(s); });
         renderStands();
       }, 50);
     } else {
-      // Already initialized: just fix size
-      setTimeout(function(){map.invalidateSize();}, 50);
-      setTimeout(function(){map.invalidateSize();}, 300);
+      map.invalidateSize(true);
     }
   }
 }
@@ -2277,6 +2280,14 @@ async function rydGamleData(){
 }
 
 // ── POLLING ──────────────────────────────────────────────────────
+window.addEventListener('resize', function(){
+  if(map && document.getElementById('v-kort').classList.contains('active')){
+    var h = window.innerHeight - 52 - 62;
+    document.getElementById('map').style.height = h + 'px';
+    map.invalidateSize(true);
+  }
+});
+
 function startPolling(){
   // Poll chat every 6s
   setInterval(function(){
