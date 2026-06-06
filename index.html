@@ -22,7 +22,7 @@
   --red:#9a2525;--red2:#6a1515;
   --text:#f4ede0;--text2:#9ab89a;--text3:#4a6a4a;
   --border:rgba(212,168,67,0.2);
-  --border2:rgba(212,168,67,0.08);
+  --border2:rgba(212,168,67,0.08);--fp:'Playfair Display';--fl:'Lora';--fp:'Playfair Display';
   --glass:rgba(15,26,15,0.7);
   --glass2:rgba(22,35,22,0.8);
   --shadow:0 8px 32px rgba(0,0,0,0.6);
@@ -917,8 +917,8 @@ function renderMembers(){
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button onclick="editMember('${name}')" style="flex:1;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-size:13px;cursor:pointer;font-family:'Lora',serif;">✏️ Skift kode</button>
-        <button onclick="resetMemberPass('${name}')" style="flex:1;padding:10px;background:rgba(212,168,67,0.1);border:1px solid var(--border);border-radius:10px;color:var(--gold);font-size:13px;cursor:pointer;font-family:'Lora',serif;">🔑 Nulstil</button>
+        <button onclick="editMember('${name}')" style="flex:1;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-size:13px;cursor:pointer;font-family:var(--fl),serif;">✏️ Skift kode</button>
+        <button onclick="resetMemberPass('${name}')" style="flex:1;padding:10px;background:rgba(212,168,67,0.1);border:1px solid var(--border);border-radius:10px;color:var(--gold);font-size:13px;cursor:pointer;font-family:var(--fl),serif;">🔑 Nulstil</button>
         ${name!==currentUser?`<button onclick="deleteMember('${name}')" style="padding:10px 14px;background:var(--red2);border:1px solid var(--red);border-radius:10px;color:#f4d0d0;font-size:13px;cursor:pointer;">🗑</button>`:''}
       </div>
     </div>`).join('');
@@ -1199,23 +1199,28 @@ async function loadHuntsFromFB(){
 }
 
 async function initFirebase(){
-  // 1. Show offline cache immediately so app feels fast
+
+  // ── 1. Load offline cache instantly ──
   const hadCache = loadOfflineCache();
   if(hadCache){
+    // Populate arrays from cache immediately
+    stands = [];
     syncStandsFromDB();
-    buildLoginSelect();
+    kills = Object.values(DB.kills||{}).sort((a,b)=>(b.id||0)-(a.id||0));
+    hunts = Object.values(DB.hunts||{}).filter(x=>x&&x.date).sort((a,b)=>a.date.localeCompare(b.date));
     if(isAdmin()) document.getElementById('tab-admin').style.display='';
     if(currentUser){
-      const crown=isAdmin()?' 👑':'';
-      document.getElementById('user-badge').textContent='👤 '+currentUser+crown;
+      const crown = isAdmin()?' 👑':'';
+      document.getElementById('user-badge').textContent = '👤 '+currentUser+crown;
     }
-    renderDashboard(); // Show immediately from cache
-    toast('📦 Indlæser...');
+    renderDashboard();
+    loadWeatherForDashboard();
+    toast('📦 Opdaterer...');
   } else {
     toast('⏳ Henter data...');
   }
 
-  // 2. Load all data in parallel
+  // ── 2. Fetch all Firebase data in parallel ──
   try{
     const [dbRes, favRes, msgRes, areaRes, extraRes] = await Promise.all([
       fetch(FB+'.json').catch(()=>null),
@@ -1225,51 +1230,49 @@ async function initFirebase(){
       fetch(FB+'/extraAreas.json').catch(()=>null)
     ]);
 
-    // Parse main DB
     if(dbRes && dbRes.ok){
       const d = await dbRes.json();
       if(d && typeof d==='object'){
-        if(d.stands) DB.stands=d.stands;
-        if(d.kills)  DB.kills=d.kills;
-        if(d.hunts)  DB.hunts=d.hunts;
-        if(d.members) DB.members=d.members;
-        if(d.activity) DB.activity=d.activity;
-        if(d.nextStandId) DB.nextStandId=d.nextStandId;
-        if(d.chat) DB.chat=d.chat;
-        if(d.vagtplan) DB.vagtplan=d.vagtplan;
-        if(d.kvoter) DB.kvoter=d.kvoter;
+        if(d.stands)     DB.stands    = d.stands;
+        if(d.kills)      DB.kills     = d.kills;
+        if(d.hunts)      DB.hunts     = d.hunts;
+        if(d.members)    DB.members   = d.members;
+        if(d.activity)   DB.activity  = d.activity;
+        if(d.nextStandId)DB.nextStandId = d.nextStandId;
+        if(d.chat)       DB.chat      = d.chat;
+        if(d.vagtplan)   DB.vagtplan  = d.vagtplan;
+        if(d.kvoter)     DB.kvoter    = d.kvoter;
       }
     }
+    if(favRes  && favRes.ok){  const d=await favRes.json();  if(d) DB.favorites=d; }
+    if(msgRes  && msgRes.ok){  const d=await msgRes.json();  if(d) DB.adminMsg=d; }
+    if(areaRes && areaRes.ok){ const d=await areaRes.json(); if(d){ if(d.nord)nordPoints=d.nord; if(d.syd)sydPoints=d.syd; } }
+    if(extraRes&& extraRes.ok){ const d=await extraRes.json(); if(d&&typeof d==='object') extraAreas=d; }
+  } catch(e){ console.error('DB fejl:', e.message); }
 
-    // Parse extras
-    if(favRes && favRes.ok){ const d=await favRes.json(); if(d) DB.favorites=d; }
-    if(msgRes && msgRes.ok){ const d=await msgRes.json(); if(d) DB.adminMsg=d; }
-    if(areaRes && areaRes.ok){
-      const d=await areaRes.json();
-      if(d){ if(d.nord) nordPoints=d.nord; if(d.syd) sydPoints=d.syd; }
-    }
-    if(extraRes && extraRes.ok){ const d=await extraRes.json(); if(d&&typeof d==='object') extraAreas=d; }
-
-  } catch(e){ console.error('DB load fejl:', e.message); }
-
-  // 3. Setup defaults if empty
-  if(Object.keys(DB.stands||{}).length===0){
-    const defaultS={};
-    for(let i=1;i<=10;i++) defaultS[i]={id:i,name:'Torn '+i,lat:null,lng:null,booking:null};
-    DB.stands=defaultS; DB.nextStandId=11;
-    await fbWrite('stands',defaultS); await fbWrite('nextStandId',11);
+  // ── 3. Default stands if empty ──
+  if(!Object.keys(DB.stands||{}).length){
+    const ds={};
+    for(let i=1;i<=10;i++) ds[i]={id:i,name:'Torn '+i,lat:null,lng:null,booking:null};
+    DB.stands=ds; DB.nextStandId=11;
+    await fbWrite('stands',ds);
+    await fbWrite('nextStandId',11);
   }
 
-  // 4. Setup stands
+  // ── 4. Populate arrays ──
   if(!nordPoints) nordPoints=nord.map(p=>({lat:p[0],lng:p[1]}));
-  if(!sydPoints) sydPoints=syd.map(p=>({lat:p[0],lng:p[1]}));
+  if(!sydPoints)  sydPoints=syd.map(p=>({lat:p[0],lng:p[1]}));
+
+  stands = [];
+  syncStandsFromDB();
+  kills = Object.values(DB.kills||{}).sort((a,b)=>(b.id||0)-(a.id||0));
+  hunts = Object.values(DB.hunts||{}).filter(x=>x&&x.date).sort((a,b)=>a.date.localeCompare(b.date));
 
   const maxId = Math.max(0,...Object.keys(DB.stands||{}).map(Number));
   if(maxId>=nextStandId) nextStandId=maxId+1;
-  if(DB.nextStandId && DB.nextStandId>nextStandId) nextStandId=DB.nextStandId;
+  if(DB.nextStandId&&DB.nextStandId>nextStandId) nextStandId=DB.nextStandId;
 
-  // 5. Update UI
-  syncStandsFromDB();
+  // ── 5. Update UI ──
   buildLoginSelect();
   redrawAllAreas();
   updateExtraAreaButtons();
@@ -1279,20 +1282,17 @@ async function initFirebase(){
     document.getElementById('user-badge').textContent='👤 '+currentUser+crown;
   }
 
-  // 6. Save to offline cache
+  // ── 6. Cache + render ──
   saveOfflineCache();
-
-  // 7. Render dashboard fresh
   renderDashboard();
+  if(!hadCache) loadWeatherForDashboard();
   toast('✅ Klar!');
+
+  // ── 7. Start polling ──
   startPolling();
-  // Live dashboard refresh every 30 seconds
   setInterval(()=>{
-    if(document.getElementById('v-hjem').classList.contains('active')){
-      renderDashboard();
-    }
+    if(document.getElementById('v-hjem').classList.contains('active')) renderDashboard();
   }, 30000);
-  // Poll chat every 5 seconds
   setInterval(async()=>{
     try{
       const r=await fetch(FB+'/chat.json');
@@ -1300,30 +1300,20 @@ async function initFirebase(){
       const d=await r.json();
       if(!d) return;
       if(JSON.stringify(d)!==JSON.stringify(DB.chat)){
-        const oldCount = Object.keys(DB.chat||{}).length;
         DB.chat=d;
-        const newCount = Object.keys(DB.chat||{}).length;
-        // Show badge if new messages and not on chat tab
-        // Count total unread across all channels
-        const totalUnread = Object.values(DB.chat||{}).filter(m=>
-          m.user!==currentUser && !m.read
-        ).length;
-        const badge = document.getElementById('chat-badge');
-        const onChat = document.getElementById('v-chat').classList.contains('active');
+        const unread=Object.values(DB.chat||{}).filter(m=>m.user!==currentUser&&!m.read).length;
+        const badge=document.getElementById('chat-badge');
+        const onChat=document.getElementById('v-chat').classList.contains('active');
         if(badge){
-          if(totalUnread > 0 && !onChat){
-            badge.style.display='flex'; badge.textContent=totalUnread;
-          } else {
-            badge.style.display='none';
-          }
+          if(unread>0&&!onChat){ badge.style.display='flex'; badge.textContent=unread; }
+          else badge.style.display='none';
         }
         if(onChat){ buildChatTabs(); renderChat(); }
       }
     }catch(e){}
   }, 5000);
-  toast(`✅ ${standsCount||10} torne klar`);
-  if(document.getElementById('v-hjem').classList.contains('active')) renderDashboard();
 }
+
 
 // ═══════════════════════════════════════════════════════════════
 // NAVIGATION
@@ -1641,7 +1631,7 @@ function renderKills(){
   list.innerHTML=filtered.map(k=>{
     const sn=(stands.find(s=>s.id===k.standId)||{}).name||'Ukendt sted';
     const delBtn=isAdmin()||k.hunter===currentUser
-      ? `<button onclick="deleteKill(${k.id})" style="background:var(--red2);border:1px solid var(--red);border-radius:5px;color:#f4d0d0;padding:3px 8px;font-size:10px;cursor:pointer;font-family:'Lora',serif;">🗑 Slet</button>`
+      ? `<button onclick="deleteKill(${k.id})" style="background:var(--red2);border:1px solid var(--red);border-radius:5px;color:#f4d0d0;padding:3px 8px;font-size:10px;cursor:pointer;font-family:var(--fl),serif;">🗑 Slet</button>`
       : '';
     const aColor = ANIMAL_COLORS[k.animal]||'var(--green)';
     const animalEmojis = {'Råbuk':'🦌','Rå':'🦌','Kronhjort':'🦌','Hind':'🦌','Dådyr':'🦌','Dåbuk':'🦌','Vildsvin':'🐗','Hare':'🐇','Fasan':'🐦','Ræv':'🦊','Andet':'🎯'};
@@ -1653,7 +1643,7 @@ function renderKills(){
           <div style="display:flex;align-items:center;gap:10px;">
             <div style="width:44px;height:44px;background:${aColor}22;border:2px solid ${aColor};border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;">${emoji}</div>
             <div>
-              <div style="font-family:'Playfair Display',serif;font-size:18px;color:${aColor};font-weight:700;">${k.animal}</div>
+              <div style="font-family:var(--fp),serif;font-size:18px;color:${aColor};font-weight:700;">${k.animal}</div>
               ${k.weight?`<div style="font-size:12px;color:var(--text3);">⚖️ ${k.weight} kg</div>`:''}
             </div>
           </div>
@@ -1834,9 +1824,9 @@ function renderStats(){
     <div style="padding:16px">
       <div class="card" style="margin-bottom:14px">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
-          <div><div style="font-size:28px;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif">${filteredKills.length}</div><div style="font-size:11px;color:var(--text3)">Nedlagte</div></div>
-          <div><div style="font-size:28px;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif">${hunts.length}</div><div style="font-size:11px;color:var(--text3)">Fællesjagter</div></div>
-          <div><div style="font-size:28px;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif">${stands.filter(s=>s.lat).length}</div><div style="font-size:11px;color:var(--text3)">Torne placeret</div></div>
+          <div><div style="font-size:28px;font-weight:700;color:var(--gold);font-family:var(--fp),serif">${filteredKills.length}</div><div style="font-size:11px;color:var(--text3)">Nedlagte</div></div>
+          <div><div style="font-size:28px;font-weight:700;color:var(--gold);font-family:var(--fp),serif">${hunts.length}</div><div style="font-size:11px;color:var(--text3)">Fællesjagter</div></div>
+          <div><div style="font-size:28px;font-weight:700;color:var(--gold);font-family:var(--fp),serif">${stands.filter(s=>s.lat).length}</div><div style="font-size:11px;color:var(--text3)">Torne placeret</div></div>
         </div>
       </div>
       <div class="card" style="margin-bottom:14px"><div class="card-title" style="margin-bottom:12px">Pr. dyreart</div>${bar(byAnimal,'var(--green)')}</div>
@@ -1892,7 +1882,7 @@ function renderTorneView(){
     const placerBtn = `<button onclick="placerTorn(${s.id})" style="background:${s.lat?'var(--bg3)':'var(--green2)'};border:1px solid ${s.lat?'var(--border)':'var(--green)'};border-radius:8px;padding:6px 10px;color:${s.lat?'var(--text2)':'var(--text)'};font-size:12px;cursor:pointer;" title="${s.lat?'Flyt på kort':'Placer på kort'}">${s.lat?'🗺':'📍'}</button>`;
     return `<div class="card">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:40px;height:40px;background:${bk?'var(--pink)':'var(--gold)'};color:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;font-family:'Playfair Display',serif;flex-shrink:0;">${s.id}</div>
+        <div style="width:40px;height:40px;background:${bk?'var(--pink)':'var(--gold)'};color:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;font-family:var(--fp),serif;flex-shrink:0;">${s.id}</div>
         <div style="flex:1;">
           <div class="card-title" style="margin:0;">${s.name}</div>
           <div style="font-size:12px;color:${bk?'var(--pink)':'var(--green)'};margin-top:3px;">${bk?'🔴 '+bk.hunter+(bk.time?' kl. '+bk.time:''):s.lat?'🟢 Ledig':'⚠️ Ikke placeret'}</div>
@@ -1990,7 +1980,7 @@ async function loadVejr(){
     let html = `
       <div class="card" style="text-align:center;padding:24px;">
         <div style="font-size:64px;margin-bottom:8px;">${wicon}</div>
-        <div style="font-size:48px;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif;">${Math.round(cur.temperature_2m)}°C</div>
+        <div style="font-size:48px;font-weight:700;color:var(--gold);font-family:var(--fp),serif;">${Math.round(cur.temperature_2m)}°C</div>
         <div style="font-size:14px;color:var(--text2);margin-top:8px;">
           Vind: ${Math.round(cur.windspeed_10m)} km/t
           <span style="display:inline-block;transform:rotate(${cur.winddirection_10m}deg);font-size:18px;">↑</span>
@@ -2132,7 +2122,7 @@ function buildChatTabs(){
     const unread = Object.values(DB.chat||{}).filter(m=>
       m.channel===ch && m.user!==currentUser && !m.read
     ).length;
-    return `<button onclick="switchChat('${ch}')" style="background:${isActive?'var(--green2)':'var(--bg2)'};color:${isActive?'var(--text)':'var(--text3)'};border:1px solid ${isActive?'var(--green)':'var(--border)'};border-radius:20px;padding:7px 12px;font-family:'Lora',serif;font-size:12px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px;">
+    return `<button onclick="switchChat('${ch}')" style="background:${isActive?'var(--green2)':'var(--bg2)'};color:${isActive?'var(--text)':'var(--text3)'};border:1px solid ${isActive?'var(--green)':'var(--border)'};border-radius:20px;padding:7px 12px;font-family:var(--fl),serif;font-size:12px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px;">
       ${unread>0?`<span style="width:8px;height:8px;background:#c8302a;border-radius:50%;display:inline-block;flex-shrink:0;"></span>`:'🔒'}
       ${other}
     </button>`;
@@ -2322,7 +2312,7 @@ function renderKvoter(){
     html += `<div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div class="card-title" style="margin:0;">${animal}</div>
-        <div style="font-size:18px;font-weight:700;color:${color};font-family:'Playfair Display',serif;">${shot}${max?' / '+max:''}</div>
+        <div style="font-size:18px;font-weight:700;color:${color};font-family:var(--fp),serif;">${shot}${max?' / '+max:''}</div>
       </div>
       ${max?`<div style="background:var(--bg3);border-radius:4px;height:10px;overflow:hidden;">
         <div style="width:${pct}%;background:${color};height:100%;border-radius:4px;transition:width .3s;"></div>
@@ -2362,900 +2352,201 @@ async function saveKvote(){
 async function renderDashboard(){
   const el = document.getElementById('hjem-content');
   if(!el) return;
-
-  // Show content immediately with placeholders
   const now = new Date();
   const today = now.toISOString().split('T')[0];
+
+  // Build HTML in simple string parts - fast
+  let h = '';
+
+  // Admin message
+  if(DB.adminMsg && DB.adminMsg.text){
+    h += '<div style="background:linear-gradient(135deg,#2a1a0a,#3a2a0a);border:2px solid var(--gold);border-radius:14px;padding:14px;margin-bottom:12px;">';
+    h += '<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:6px;">📢 VIGTIG BESKED</div>';
+    h += '<div style="font-size:14px;color:var(--text);">'+DB.adminMsg.text+'</div>';
+    h += '<div style="font-size:10px;color:var(--text3);margin-top:6px;">'+DB.adminMsg.time+'</div></div>';
+  }
+
+  // Welcome
+  h += '<div style="text-align:center;padding:8px 0 12px;">';
+  h += '<div style="font-family:var(--fp),serif;font-size:20px;color:var(--gold);">God jagt, '+currentUser+'! 🦌</div>';
+  h += '<div style="font-size:12px;color:var(--text3);margin-top:4px;">'+now.toLocaleDateString('da-DK',{weekday:'long',day:'numeric',month:'long'})+'</div>';
+  h += '</div>';
+
+  // Weather placeholder - fills in async
+  h += '<div id="dash-weather" style="background:linear-gradient(135deg,#182818,#1e3a1e);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:16px;">';
+  h += '<div style="font-size:40px;">🌤️</div>';
+  h += '<div style="flex:1;"><div style="font-size:26px;font-weight:700;color:var(--gold);font-family:var(--fp),serif;">...</div>';
+  h += '<div style="font-size:13px;color:var(--text3);">Henter vejr...</div></div>';
+  h += '<div style="text-align:center;"><div style="font-size:11px;color:var(--text3);">🌄 --:--</div><div style="font-size:11px;color:var(--text3);margin-top:4px;">🌇 --:--</div></div></div>';
+
+  // Stands status
   const occupied = stands.filter(s=>s.booking);
   const free = stands.filter(s=>s.lat && !s.booking);
-  const nextHunt = hunts.filter(h=>h.date>=today).sort((a,b)=>a.date.localeCompare(b.date))[0];
-  const latestKills = kills.slice(0,3);
-  const unreadCount = Object.values(DB.chat||{}).filter(m=>m.user!==currentUser&&!m.read).length;
+  h += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;">';
+  h += '<div style="font-family:var(--fp),serif;font-size:16px;color:var(--gold);margin-bottom:12px;">🌲 Torne</div>';
+  h += '<div style="display:flex;gap:8px;margin-bottom:10px;">';
+  h += '<div style="flex:1;background:var(--bg3);border-radius:10px;padding:10px;text-align:center;"><div style="font-size:24px;font-weight:700;color:var(--green);font-family:var(--fp),serif;">'+free.length+'</div><div style="font-size:11px;color:var(--text3);">Ledige</div></div>';
+  h += '<div style="flex:1;background:var(--bg3);border-radius:10px;padding:10px;text-align:center;"><div style="font-size:24px;font-weight:700;color:var(--pink);font-family:var(--fp),serif;">'+occupied.length+'</div><div style="font-size:11px;color:var(--text3);">Optaget</div></div>';
+  h += '</div>';
+  if(occupied.length){
+    occupied.forEach(s=>{
+      h += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);">';
+      h += '<div style="width:28px;height:28px;background:var(--pink);color:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">'+s.id+'</div>';
+      h += '<div style="flex:1;font-size:13px;color:var(--text);">'+s.name+'</div>';
+      h += '<div style="font-size:12px;color:var(--pink);">👤 '+(s.booking?s.booking.hunter:'')+'</div></div>';
+    });
+  } else {
+    h += '<div style="font-size:12px;color:var(--text3);text-align:center;padding:4px 0;">Alle torne er ledige</div>';
+  }
+  h += '<button onclick="showView(&quot;torne&quot;)" style="width:100%;margin-top:10px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:var(--fl),serif;font-size:13px;cursor:pointer;">Se alle torne →</button></div>';
 
-  // Render immediately without weather
-  renderDashboardContent(el, now, today, occupied, free, nextHunt, latestKills, unreadCount, '...', '--:--', '--:--', '--°C', '-- km/t', 0, '🌤️');
-  
-  // Load weather in background
-  loadWeatherForDashboard(el, now, today, occupied, free, nextHunt, latestKills, unreadCount);
+  // Next hunt
+  const nextHunt = hunts.filter(h2=>h2.date>=today).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  h += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;">';
+  h += '<div style="font-family:var(--fp),serif;font-size:16px;color:var(--gold);margin-bottom:10px;">📅 Næste jagt</div>';
+  if(nextHunt){
+    h += '<div style="font-size:18px;color:var(--text);font-family:var(--fp),serif;">'+fmtDate(nextHunt.date)+'</div>';
+    h += '<div style="font-size:13px;color:var(--green);margin-top:4px;text-transform:uppercase;letter-spacing:.3px;">'+nextHunt.type+'</div>';
+    if(nextHunt.note) h += '<div style="font-size:12px;color:var(--text3);margin-top:6px;">📌 '+nextHunt.note+'</div>';
+    h += '<div style="font-size:12px;color:var(--text3);margin-top:6px;">👥 '+((nextHunt.signups||[]).length)+' tilmeldte</div>';
+    h += '<button onclick="showView(&quot;jagt&quot;)" style="width:100%;margin-top:10px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:var(--fl),serif;font-size:13px;cursor:pointer;">Se alle jagter →</button>';
+  } else {
+    h += '<div style="font-size:13px;color:var(--text3);text-align:center;">Ingen kommende jagter</div>';
+  }
+  h += '</div>';
+
+  // Latest kills
+  const latestKills = kills.slice(0,3);
+  if(latestKills.length){
+    h += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;">';
+    h += '<div style="font-family:var(--fp),serif;font-size:16px;color:var(--gold);margin-bottom:10px;">🎯 Seneste nedlagte</div>';
+    latestKills.forEach(k=>{
+      const ac = (ANIMAL_COLORS&&ANIMAL_COLORS[k.animal])||'var(--green)';
+      const sn = (stands.find(s=>s.id===k.standId)||{}).name||'Ukendt';
+      h += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">';
+      h += '<div style="width:10px;height:10px;background:'+ac+';border-radius:50%;flex-shrink:0;"></div>';
+      h += '<div style="flex:1;"><div style="font-size:13px;color:var(--text);font-weight:600;">'+k.animal+(k.weight?' · '+k.weight+' kg':'')+'</div>';
+      h += '<div style="font-size:11px;color:var(--text3);">'+k.hunter+' · '+sn+' · '+(k.date||'')+'</div></div></div>';
+    });
+    h += '<button onclick="showView(&quot;log&quot;)" style="width:100%;margin-top:10px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:var(--fl),serif;font-size:13px;cursor:pointer;">Se hele skydelog →</button></div>';
+  }
+
+  // Unread chat
+  const unread = Object.values(DB.chat||{}).filter(m=>m.user!==currentUser&&!m.read).length;
+  if(unread>0){
+    h += '<div onclick="showView(&quot;chat&quot;);closeMoreMenu();" style="background:linear-gradient(135deg,#1a2a1a,#1e3a1e);border:1px solid var(--green);border-radius:16px;padding:16px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:12px;">';
+    h += '<div style="font-size:32px;">💬</div><div style="flex:1;"><div style="font-size:15px;color:var(--text);font-weight:600;">'+unread+' ulæst'+(unread>1?'e':'')+' besked'+(unread>1?'er':'')+'</div>';
+    h += '<div style="font-size:12px;color:var(--text3);margin-top:2px;">Tryk for at læse →</div></div>';
+    h += '<div style="background:#c8302a;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">'+unread+'</div></div>';
+  }
+
+  // Mini stats
+  const thisYear = new Date().getFullYear().toString();
+  const killsThisYear = kills.filter(k=>k.date&&k.date.startsWith(thisYear)).length;
+  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">';
+  h += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--gold);font-family:var(--fp),serif;">'+killsThisYear+'</div><div style="font-size:10px;color:var(--text3);">Nedlagte i år</div></div>';
+  h += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--gold);font-family:var(--fp),serif;">'+stands.filter(s=>s.lat).length+'</div><div style="font-size:10px;color:var(--text3);">Torne placeret</div></div>';
+  h += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--gold);font-family:var(--fp),serif;">'+hunts.filter(h2=>h2.date>=today).length+'</div><div style="font-size:10px;color:var(--text3);">Kommende jagter</div></div>';
+  h += '</div>';
+
+  // Quick actions
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">';
+  h += '<button onclick="openKillModal()" style="padding:16px;background:var(--green2);border:1px solid var(--green);border-radius:14px;color:var(--text);font-family:var(--fl),serif;font-size:14px;cursor:pointer;text-align:center;"><div style="font-size:28px;margin-bottom:6px;">🎯</div>Registrer vildt</button>';
+  h += '<button onclick="showView(&quot;torne&quot;)" style="padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:var(--fl),serif;font-size:14px;cursor:pointer;text-align:center;"><div style="font-size:28px;margin-bottom:6px;">🌲</div>Check ind</button>';
+  h += '</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">';
+  h += '<button onclick="openGallery()" style="padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:var(--fl),serif;font-size:14px;cursor:pointer;text-align:center;"><div style="font-size:28px;margin-bottom:6px;">📸</div>Foto galleri</button>';
+  h += '<button onclick="showView(&quot;chat&quot;);closeMoreMenu();" style="padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:var(--fl),serif;font-size:14px;cursor:pointer;text-align:center;"><div style="font-size:28px;margin-bottom:6px;">💬</div>Beskeder</button>';
+  h += '</div>';
+  h += '<button onclick="renderDashboard()" style="width:100%;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;color:var(--text3);font-family:var(--fl),serif;font-size:13px;cursor:pointer;margin-bottom:20px;">🔄 Opdater</button>';
+
+  // Set HTML all at once - single DOM write
+  el.innerHTML = h;
+
+  // Load weather async after showing content
+  loadWeatherForDashboard();
 }
 
-async function loadWeatherForDashboard(el, now, today, occupied, free, nextHunt, latestKills, unreadCount){
-  let sunriseStr='--:--', sunsetStr='--:--', tempStr='--°C', windStr='-- km/t', windDeg=0, weatherIcon='🌤️', sunInfo='';
+async function loadWeatherForDashboard(){
+  const wd = document.getElementById('dash-weather');
+  if(!wd) return;
+
+  // Show cached weather instantly
+  try{
+    const cached = localStorage.getItem('dystrup_weather');
+    if(cached){
+      const c = JSON.parse(cached);
+      // Use cache if less than 30 minutes old
+      if(Date.now() - c.ts < 1800000){
+        wd.innerHTML = c.html;
+        startHuntTimer();
+        // Refresh in background silently
+        fetchWeather(false);
+        return;
+      }
+    }
+  } catch(e){}
+
+  // No cache - fetch fresh
+  fetchWeather(true);
+}
+
+async function fetchWeather(showInWidget){
+  const wd = document.getElementById('dash-weather');
   try{
     const controller = new AbortController();
-    const timeout = setTimeout(()=>controller.abort(), 5000);
-    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=56.448&longitude=10.652&current=temperature_2m,windspeed_10m,winddirection_10m,weathercode&daily=sunrise,sunset&timezone=Europe%2FCopenhagen&forecast_days=1', {signal: controller.signal});
-    clearTimeout(timeout);
-    if(r.ok){
-      const d = await r.json();
-      const cur = d.current;
-      const daily = d.daily;
-      const fmtTime = t => t ? t.split('T')[1].substring(0,5) : '--:--';
-      sunriseStr = fmtTime(daily.sunrise&&daily.sunrise[0]);
-      sunsetStr = fmtTime(daily.sunset&&daily.sunset[0]);
-      tempStr = Math.round(cur.temperature_2m)+'°C';
-      windStr = Math.round(cur.windspeed_10m)+' km/t';
-      windDeg = cur.winddirection_10m||0;
-      const wicons = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',51:'🌦️',61:'🌧️',71:'🌨️',80:'🌦️',95:'⛈️'};
-      weatherIcon = wicons[cur.weathercode]||'🌤️';
-      const nowMin = now.getHours()*60+now.getMinutes();
-      const srMin = sunriseStr!=='--:--'?parseInt(sunriseStr)*60+parseInt(sunriseStr.split(':')[1]):0;
-      const ssMin = sunsetStr!=='--:--'?parseInt(sunsetStr)*60+parseInt(sunsetStr.split(':')[1]):0;
-      if(nowMin<srMin){ const d2=srMin-nowMin; sunInfo='<span style="color:var(--gold)">Solopgang om '+(d2>60?Math.floor(d2/60)+'t ':'')+d2%60+'m</span>'; }
-      else if(nowMin<ssMin){ const d2=ssMin-nowMin; sunInfo='<span style="color:var(--text2)">Solnedgang om '+(d2>60?Math.floor(d2/60)+'t ':'')+d2%60+'m</span>'; }
-      else{ sunInfo='<span style="color:var(--text3)">Solen er nede</span>'; }
+    setTimeout(()=>controller.abort(), 5000);
+    const r = await fetch(
+      'https://api.open-meteo.com/v1/forecast?latitude=56.448&longitude=10.652&current=temperature_2m,windspeed_10m,winddirection_10m,weathercode&daily=sunrise,sunset&timezone=Europe%2FCopenhagen&forecast_days=1',
+      {signal:controller.signal}
+    );
+    if(!r.ok) return;
+    const d = await r.json();
+    const cur = d.current;
+    const daily = d.daily;
+    const fmtT = t=>t?t.split('T')[1].substring(0,5):'--:--';
+    const sr = fmtT(daily.sunrise&&daily.sunrise[0]);
+    const ss = fmtT(daily.sunset&&daily.sunset[0]);
+    const temp = Math.round(cur.temperature_2m)+'°C';
+    const wind = Math.round(cur.windspeed_10m)+' km/t';
+    const deg = cur.winddirection_10m||0;
+    const wicons={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',51:'🌦️',61:'🌧️',71:'🌨️',80:'🌦️',95:'⛈️'};
+    const icon = wicons[cur.weathercode]||'🌤️';
+    const now = new Date();
+    const nm = now.getHours()*60+now.getMinutes();
+    const srm = sr!=='--:--'?parseInt(sr)*60+parseInt(sr.split(':')[1]):0;
+    const ssm = ss!=='--:--'?parseInt(ss)*60+parseInt(ss.split(':')[1]):0;
+    let sunInfo = '';
+    if(nm<srm){ const df=srm-nm; sunInfo='Solopgang om '+(df>60?Math.floor(df/60)+'t ':'')+df%60+'m'; }
+    else if(nm<ssm){ const df=ssm-nm; sunInfo='Solnedgang om '+(df>60?Math.floor(df/60)+'t ':'')+df%60+'m'; }
+    else{ sunInfo='Solen er nede'; }
+
+    const weatherHtml = '<div style="font-size:40px;">'+icon+'</div>'
+      +'<div style="flex:1;">'
+      +'<div style="font-size:26px;font-weight:700;color:var(--gold);">'+temp+'</div>'
+      +'<div style="font-size:13px;color:var(--text2);">💨 '+wind+' <span style="display:inline-block;transform:rotate('+deg+'deg);">↑</span></div>'
+      +'<div style="font-size:12px;color:var(--text3);margin-top:4px;" id="sun-info">'+sunInfo+'</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-top:2px;">⏱️ Solopgang om <span id="hunt-timer">...</span></div>'
+      +'<span id="sunrise-time" style="display:none;">'+sr+'</span>'
+      +'</div>'
+      +'<div style="text-align:center;">'
+      +'<div style="font-size:13px;color:var(--text3);">🌄 '+sr+'</div>'
+      +'<div style="font-size:13px;color:var(--text3);margin-top:4px;">🌇 '+ss+'</div>'
+      +'</div>';
+
+    // Cache it
+    localStorage.setItem('dystrup_weather', JSON.stringify({html:weatherHtml, ts:Date.now()}));
+
+    if(showInWidget && wd) wd.innerHTML = weatherHtml;
+    else if(wd) wd.innerHTML = weatherHtml; // always update
+    startHuntTimer();
+  } catch(e){
+    if(showInWidget && wd){
+      wd.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;width:100%;">Vejr utilgængeligt</div>';
     }
-  } catch(e){ sunInfo='<span style="color:var(--text3)">Vejr utilgængeligt</span>'; }
-  
-  renderDashboardContent(el, now, today, occupied, free, nextHunt, latestKills, unreadCount, sunInfo, sunriseStr, sunsetStr, tempStr, windStr, windDeg, weatherIcon);
-  setTimeout(startHuntTimer, 200);
-}
-
-function renderDashboardContent(el, now, today, occupied, free, nextHunt, latestKills, unreadCount, sunInfo, sunriseStr, sunsetStr, tempStr, windStr, windDeg, weatherIcon){
-  if(!el) return;
-
-  el.innerHTML = `
-    <!-- ADMIN BESKED -->
-    ${DB.adminMsg ? `
-    <div style="background:linear-gradient(135deg,#2a1a0a,#3a2a0a);border:2px solid var(--gold);border-radius:14px;padding:14px;margin-bottom:12px;">
-      <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:6px;">📢 VIGTIG BESKED FRA ${(DB.adminMsg.from||'').toUpperCase()}</div>
-      <div style="font-size:14px;color:var(--text);">${DB.adminMsg.text}</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:6px;">${DB.adminMsg.time}</div>
-    </div>` : ''}
-
-    <!-- VELKOMMEN -->
-    <div style="text-align:center;padding:8px 0 12px;">
-      <div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--gold);">God jagt, ${currentUser}! 🦌</div>
-      <div style="font-size:12px;color:var(--text3);margin-top:4px;">${now.toLocaleDateString('da-DK',{weekday:'long',day:'numeric',month:'long'})}</div>
-    </div>
-
-    <!-- VEJR WIDGET -->
-    <div style="background:linear-gradient(135deg,#182818,#1e3a1e);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:16px;">
-      <div style="font-size:48px;">${weatherIcon}</div>
-      <div style="flex:1;">
-        <div style="font-size:28px;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif;">${tempStr}</div>
-        <div style="font-size:13px;color:var(--text2);">Vind: ${windStr} <span style="display:inline-block;transform:rotate(${windDeg}deg);">↑</span></div>
-        <div style="font-size:12px;margin-top:4px;">${sunInfo}</div>
-        ${nowMin < sunriseMin ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">⏱️ Solopgang om <span id="hunt-timer">...</span></div><span id="sunrise-time" style="display:none;">${sunriseStr}</span>` : ''}
-      </div>
-      <div style="text-align:center;">
-        <div style="font-size:11px;color:var(--text3);">🌄 ${sunriseStr}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:4px;">🌇 ${sunsetStr}</div>
-      </div>
-    </div>
-
-    <!-- TORNE STATUS -->
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;">
-      <div style="font-family:'Playfair Display',serif;font-size:16px;color:var(--gold);margin-bottom:12px;">🌲 Torne</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;">
-        <div style="flex:1;background:var(--bg3);border-radius:10px;padding:10px;text-align:center;">
-          <div style="font-size:24px;font-weight:700;color:var(--green);font-family:'Playfair Display',serif;">${free.length}</div>
-          <div style="font-size:11px;color:var(--text3);">Ledige</div>
-        </div>
-        <div style="flex:1;background:var(--bg3);border-radius:10px;padding:10px;text-align:center;">
-          <div style="font-size:24px;font-weight:700;color:var(--pink);font-family:'Playfair Display',serif;">${occupied.length}</div>
-          <div style="font-size:11px;color:var(--text3);">Optaget</div>
-        </div>
-      </div>
-      ${occupied.length ? occupied.map(s=>`
-        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);">
-          <div style="width:28px;height:28px;background:var(--pink);color:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">${s.id}</div>
-          <div style="flex:1;font-size:13px;color:var(--text);">${s.name}</div>
-          <div style="font-size:12px;color:var(--pink);">👤 ${s.booking.hunter}</div>
-        </div>`).join('') : '<div style="font-size:12px;color:var(--text3);text-align:center;padding:4px 0;">Alle torne er ledige</div>'}
-      <button onclick="showView('torne')" style="width:100%;margin-top:10px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:'Lora',serif;font-size:13px;cursor:pointer;">Se alle torne →</button>
-    </div>
-
-    <!-- NÆSTE JAGT -->
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;">
-      <div style="font-family:'Playfair Display',serif;font-size:16px;color:var(--gold);margin-bottom:10px;">📅 Næste jagt</div>
-      ${nextHunt ? `
-        <div style="font-size:18px;color:var(--text);font-family:'Playfair Display',serif;">${fmtDate(nextHunt.date)}</div>
-        <div style="font-size:13px;color:var(--green);margin-top:4px;text-transform:uppercase;letter-spacing:.3px;">${nextHunt.type}</div>
-        ${nextHunt.note?`<div style="font-size:12px;color:var(--text3);margin-top:6px;">📌 ${nextHunt.note}</div>`:''}
-        <div style="font-size:12px;color:var(--text3);margin-top:6px;">👥 ${(nextHunt.signups||[]).length} tilmeldte</div>
-        <button onclick="showView('jagt')" style="width:100%;margin-top:10px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:'Lora',serif;font-size:13px;cursor:pointer;">Se alle jagter →</button>
-      ` : '<div style="font-size:13px;color:var(--text3);text-align:center;">Ingen kommende jagter planlagt</div>'}
-    </div>
-
-    <!-- SENESTE NEDLAGTE -->
-    ${latestKills.length ? `
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;">
-      <div style="font-family:'Playfair Display',serif;font-size:16px;color:var(--gold);margin-bottom:10px;">🎯 Seneste nedlagte</div>
-      ${latestKills.map(k=>{
-        const aColor = (typeof ANIMAL_COLORS!=='undefined'?ANIMAL_COLORS:{})[k.animal]||'var(--green)';
-        const sn = (stands.find(s=>s.id===k.standId)||{}).name||'Ukendt sted';
-        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="width:10px;height:10px;background:${aColor};border-radius:50%;flex-shrink:0;"></div>
-          <div style="flex:1;">
-            <div style="font-size:13px;color:var(--text);font-weight:600;">${k.animal}${k.weight?' · '+k.weight+' kg':''}</div>
-            <div style="font-size:11px;color:var(--text3);">${k.hunter} · ${sn} · ${k.date||''}</div>
-          </div>
-        </div>`;
-      }).join('')}
-      <button onclick="showView('log')" style="width:100%;margin-top:10px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:'Lora',serif;font-size:13px;cursor:pointer;">Se hele skydelog →</button>
-    </div>` : ''}
-
-    <!-- ULÆSTE BESKEDER -->
-    ${unreadCount>0 ? `
-    <div onclick="showView('chat')" style="background:linear-gradient(135deg,#1a2a1a,#1e3a1e);border:1px solid var(--green);border-radius:16px;padding:16px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:12px;">
-      <div style="font-size:32px;">💬</div>
-      <div style="flex:1;">
-        <div style="font-size:15px;color:var(--text);font-weight:600;">${unreadCount} ulæst${unreadCount>1?'e':''} besked${unreadCount>1?'er':''}</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:2px;">Tryk for at læse →</div>
-      </div>
-      <div style="background:#c8302a;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">${unreadCount}</div>
-    </div>` : ''}
-
-    <!-- MINI STATISTIK -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
-        <div style="font-size:22px;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif;">${kills.filter(k=>k.date&&k.date.startsWith(new Date().getFullYear().toString())).length}</div>
-        <div style="font-size:10px;color:var(--text3);">Nedlagte i år</div>
-      </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
-        <div style="font-size:22px;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif;">${stands.filter(s=>s.lat).length}</div>
-        <div style="font-size:10px;color:var(--text3);">Torne placeret</div>
-      </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
-        <div style="font-size:22px;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif;">${hunts.filter(h=>h.date>=today).length}</div>
-        <div style="font-size:10px;color:var(--text3);">Kommende jagter</div>
-      </div>
-    </div>
-
-    <!-- HURTIGE HANDLINGER -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-      <button onclick="openKillModal()" style="padding:16px;background:var(--green2);border:1px solid var(--green);border-radius:14px;color:var(--text);font-family:'Lora',serif;font-size:14px;cursor:pointer;text-align:center;">
-        <div style="font-size:28px;margin-bottom:6px;">🎯</div>
-        Registrer vildt
-      </button>
-      <button onclick="showView('torne')" style="padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:'Lora',serif;font-size:14px;cursor:pointer;text-align:center;">
-        <div style="font-size:28px;margin-bottom:6px;">🌲</div>
-        Check ind
-      </button>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-      <button onclick="openGallery()" style="padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:'Lora',serif;font-size:14px;cursor:pointer;text-align:center;">
-        <div style="font-size:28px;margin-bottom:6px;">📸</div>
-        Foto galleri
-      </button>
-      <button onclick="showView('chat');closeMoreMenu();" style="padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:'Lora',serif;font-size:14px;cursor:pointer;text-align:center;">
-        <div style="font-size:28px;margin-bottom:6px;">💬</div>
-        Beskeder
-      </button>
-    </div>
-    
-    <!-- OPDATER KNAP -->
-    <button onclick="renderDashboard()" style="width:100%;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;color:var(--text3);font-family:'Lora',serif;font-size:13px;cursor:pointer;margin-bottom:20px;">
-      🔄 Opdater dashboard
-    </button>
-  `;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// JAGTAREAL EDITOR
-// ═══════════════════════════════════════════════════════════════
-let editingArea = null;
-let editMarkers = [];
-let editPolygon = null;
-let nordPoints = null;
-let sydPoints = null;
-
-async function loadAreaPoints(){
-  try{
-    const r = await fetch(FB+'/areaPoints.json');
-    if(r.ok){
-      const d = await r.json();
-      if(d && d.nord) nordPoints = d.nord;
-      if(d && d.syd) sydPoints = d.syd;
-    }
-  } catch(e){}
-  if(!nordPoints) nordPoints = nord.map(p=>({lat:p[0],lng:p[1]}));
-  if(!sydPoints) sydPoints = syd.map(p=>({lat:p[0],lng:p[1]}));
-  redrawAreas();
-}
-
-function redrawAreas(){
-  ag.clearLayers();
-  const aStyle={color:'#aa18a0',weight:2.5,fillColor:'#dd60cc',fillOpacity:0.28};
-  L.polygon(nordPoints.map(p=>[p.lat,p.lng]),aStyle)
-    .bindTooltip('Nordstykket',{permanent:true,direction:'center',className:'att'}).addTo(ag);
-  L.polygon(sydPoints.map(p=>[p.lat,p.lng]),aStyle)
-    .bindTooltip('Sydstykket',{permanent:true,direction:'center',className:'att'}).addTo(ag);
-}
-
-function startAreaEdit(area){
-  if(!isAdmin()){ toast('⛔ Kun administrator kan redigere jagtareal'); return; }
-  
-  // Clear any existing edit
-  clearEditMarkers();
-  editingArea = area;
-  
-  const points = area === 'nord' ? nordPoints : sydPoints;
-  
-  // Show edit bar
-  const bar = document.getElementById('area-edit-bar');
-  bar.style.display = 'flex';
-  document.getElementById('area-edit-name').textContent = area === 'nord' ? 'Nordstykket' : 'Sydstykket';
-  
-  // Disable map movement
-  map.dragging.disable();
-  map.touchZoom.disable();
-  map.scrollWheelZoom.disable();
-  map.doubleClickZoom.disable();
-  
-  // Add draggable markers
-  points.forEach((p, i) => addEditMarker(p, i, points));
-  
-  updateEditPolygon();
-  
-  // Collapse kortlag
-  const lp = document.getElementById('lp');
-  if(!lp.classList.contains('coll')) toggleP('lp');
-  
-  toast('✏️ Træk de lilla punkter for at flytte dem');
-}
-
-function addEditMarker(p, i, points){
-  const m = L.marker([p.lat, p.lng], {
-    draggable: true,
-    icon: L.divIcon({
-      className: '',
-      html: '<div style="width:28px;height:28px;background:linear-gradient(135deg,#dd60cc,#aa18a0);border:3px solid white;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.5);cursor:grab;"></div>',
-      iconSize: [28,28],
-      iconAnchor: [14,14]
-    })
-  }).addTo(map);
-  
-  m.on('drag', function(e){
-    points[i] = {lat: e.latlng.lat, lng: e.latlng.lng};
-    updateEditPolygon();
-  });
-  
-  m.on('dblclick', function(e){
-    L.DomEvent.stop(e);
-    if(points.length > 3){
-      points.splice(i, 1);
-      clearEditMarkers();
-      points.forEach((p2, i2) => addEditMarker(p2, i2, points));
-      updateEditPolygon();
-      toast('🗑 Punkt slettet');
-    } else {
-      toast('Minimum 3 punkter');
-    }
-  });
-  
-  editMarkers.push(m);
-}
-
-function clearEditMarkers(){
-  editMarkers.forEach(m => map.removeLayer(m));
-  editMarkers = [];
-  if(editPolygon){ map.removeLayer(editPolygon); editPolygon = null; }
-}
-
-function updateEditPolygon(){
-  if(editPolygon) map.removeLayer(editPolygon);
-  const points = editingArea === 'nord' ? nordPoints : sydPoints;
-  editPolygon = L.polygon(points.map(p=>[p.lat,p.lng]), {
-    color:'#ff60ff', weight:2, fillColor:'#ff60ff', fillOpacity:0.1, dashArray:'6,4'
-  }).addTo(map);
-}
-
-function addAreaPointFromButton(){
-  // Get map center and add point there
-  if(!editingArea) return;
-  const center = map.getCenter();
-  const points = editingArea === 'nord' ? nordPoints : sydPoints;
-  points.push({lat: center.lat, lng: center.lng});
-  clearEditMarkers();
-  points.forEach((p, i) => addEditMarker(p, i, points));
-  updateEditPolygon();
-  toast('📍 Nyt punkt tilføjet i midten - træk det på plads');
-}
-
-async function saveAreaEdit(){
-  if(!editingArea) return;
-  await fbWrite('areaPoints', {nord: nordPoints, syd: sydPoints});
-  const aname = editingArea === 'nord' ? 'Nordstykket' : 'Sydstykket';
-  stopAreaEdit();
-  redrawAreas();
-  toast('✅ ' + aname + ' gemt!');
-  logActivity(currentUser + ' opdaterede jagtareal');
-}
-
-function stopAreaEdit(){
-  clearEditMarkers();
-  map.dragging.enable();
-  map.touchZoom.enable();
-  map.scrollWheelZoom.enable();
-  map.doubleClickZoom.enable();
-  document.getElementById('area-edit-bar').style.display = 'none';
-  editingArea = null;
-}
-
-function resetAreaToDefault(){
-  showConfirm('Nulstil til standard koordinater?', ()=>{
-    nordPoints = nord.map(p=>({lat:p[0],lng:p[1]}));
-    sydPoints = syd.map(p=>({lat:p[0],lng:p[1]}));
-    fbWrite('areaPoints', {nord: nordPoints, syd: sydPoints});
-    stopAreaEdit();
-    redrawAreas();
-    toast('↩ Jagtareal nulstillet');
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// TEGN NYT JAGTAREAL
-// ═══════════════════════════════════════════════════════════════
-let drawingNewArea = false;
-let newAreaPoints = [];
-let newAreaLine = null;
-let newAreaPreview = null;
-let newAreaName = '';
-let extraAreas = {};
-
-async function loadExtraAreas(){
-  try{
-    const r = await fetch(FB+'/extraAreas.json');
-    if(r.ok){
-      const d = await r.json();
-      if(d && typeof d === 'object') extraAreas = d;
-    }
-  } catch(e){}
-  redrawAllAreas();
-  updateExtraAreaButtons();
-}
-
-function redrawAllAreas(){
-  redrawAreas();
-  // Draw extra areas
-  Object.entries(extraAreas).forEach(([id, area])=>{
-    if(!area || !area.points || area.points.length < 3) return;
-    const color = area.color || '#4a90d9';
-    L.polygon(area.points.map(p=>[p.lat,p.lng]),{
-      color:color, weight:2.5,
-      fillColor:color, fillOpacity:0.25
-    }).bindTooltip(area.name,{permanent:true,direction:'center',className:'att'}).addTo(ag);
-  });
-}
-
-function updateExtraAreaButtons(){
-  const el = document.getElementById('extra-area-buttons');
-  if(!el) return;
-  const entries = Object.entries(extraAreas);
-  if(!entries.length){ el.innerHTML=''; return; }
-  el.innerHTML = entries.map(([id,area])=>`
-    <div style="display:flex;gap:4px;margin-bottom:4px;">
-      <button onclick="startAreaEditExtra('${id}')" style="flex:1;padding:7px;background:rgba(74,144,217,0.2);border:1px solid #4a90d9;border-radius:8px;color:#a0c8f0;font-size:11px;cursor:pointer;font-family:'Lora',serif;">✏️ ${area.name}</button>
-      <button onclick="deleteExtraArea('${id}')" style="padding:7px 10px;background:rgba(100,20,20,0.4);border:1px solid var(--red);border-radius:8px;color:#f4d0d0;font-size:11px;cursor:pointer;">🗑</button>
-    </div>`).join('');
-}
-
-function startDrawNewArea(){
-  if(!isAdmin()){ toast('⛔ Kun administrator'); return; }
-  
-  const overlay = document.createElement('div');
-  overlay.id = 'new-area-name-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);z-index:5000;display:flex;align-items:center;justify-content:center;padding:24px;';
-  
-  const box = document.createElement('div');
-  box.style.cssText = 'background:var(--bg2);border:1px solid var(--gold);border-radius:20px;padding:24px;width:100%;max-width:380px;';
-  
-  const title = document.createElement('div');
-  title.style.cssText = 'font-family:"Playfair Display",serif;font-size:18px;color:var(--gold);margin-bottom:16px;';
-  title.textContent = 'Nyt jagtareal';
-  
-  const nameLabel = document.createElement('div');
-  nameLabel.style.cssText = 'font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;';
-  nameLabel.textContent = 'NAVN';
-  
-  const nameInput = document.createElement('input');
-  nameInput.id = 'new-area-name-input';
-  nameInput.type = 'text';
-  nameInput.placeholder = 'f.eks. Vesterskov';
-  nameInput.style.cssText = 'width:100%;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:"Lora",serif;font-size:16px;margin-bottom:12px;box-sizing:border-box;';
-  
-  const colorLabel = document.createElement('div');
-  colorLabel.style.cssText = 'font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;';
-  colorLabel.textContent = 'FARVE';
-  
-  const colorRow = document.createElement('div');
-  colorRow.style.cssText = 'display:flex;gap:8px;margin-bottom:16px;';
-  
-  const colors = ['#4a90d9','#50c878','#ff8c00','#e74c3c','#9b59b6','#1abc9c'];
-  const colorInput = document.createElement('input');
-  colorInput.type = 'hidden';
-  colorInput.id = 'new-area-color';
-  colorInput.value = colors[0];
-  
-  colors.forEach((c, i) => {
-    const dot = document.createElement('div');
-    dot.style.cssText = 'width:36px;height:36px;background:'+c+';border-radius:50%;cursor:pointer;border:'+(i===0?'3px solid white':'2px solid transparent')+';transition:border .2s;flex-shrink:0;';
-    dot.onclick = function(){
-      colorRow.querySelectorAll('div').forEach(d=>d.style.border='2px solid transparent');
-      this.style.border='3px solid white';
-      colorInput.value = c;
-    };
-    colorRow.appendChild(dot);
-  });
-  
-  const btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:8px;';
-  
-  const cancelBtn = document.createElement('button');
-  cancelBtn.style.cssText = 'flex:1;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:"Lora",serif;font-size:14px;cursor:pointer;';
-  cancelBtn.textContent = 'Annuller';
-  cancelBtn.onclick = function(){ overlay.remove(); };
-  
-  const startBtn = document.createElement('button');
-  startBtn.style.cssText = 'flex:1;padding:12px;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;border-radius:10px;color:var(--bg);font-family:"Lora",serif;font-size:14px;font-weight:700;cursor:pointer;';
-  startBtn.textContent = 'Start tegning';
-  startBtn.onclick = function(){ beginDrawing(); };
-  
-  btnRow.appendChild(cancelBtn);
-  btnRow.appendChild(startBtn);
-  
-  box.appendChild(title);
-  box.appendChild(nameLabel);
-  box.appendChild(nameInput);
-  box.appendChild(colorLabel);
-  box.appendChild(colorRow);
-  box.appendChild(colorInput);
-  box.appendChild(btnRow);
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
-  
-  setTimeout(()=>nameInput.focus(), 100);
-}
-
-
-function beginDrawing(){
-  newAreaName = document.getElementById('new-area-name-input').value.trim();
-  const color = document.getElementById('new-area-color').value;
-  if(!newAreaName){ toast('Skriv et navn'); return; }
-  document.getElementById('new-area-name-overlay').remove();
-  
-  drawingNewArea = true;
-  newAreaPoints = [];
-  
-  // Show drawing bar
-  const bar = document.getElementById('area-edit-bar');
-  bar.style.display = 'flex';
-  document.getElementById('area-edit-name').textContent = 'Tegner: ' + newAreaName;
-  
-  // Disable map dragging
-  map.dragging.disable();
-  map.touchZoom.disable();
-  map.scrollWheelZoom.disable();
-  map.doubleClickZoom.disable();
-  map.getContainer().style.cursor = 'crosshair';
-  
-  // Add click handler to draw
-  map.on('click', drawAreaClick);
-  
-  // Store color
-  newAreaColor = color;
-  
-  // Collapse kortlag
-  const lp = document.getElementById('lp');
-  if(!lp.classList.contains('coll')) toggleP('lp');
-  
-  toast('✏️ Tryk på kortet for at tegne dit areal. Tryk Gem når du er færdig.');
-}
-
-let newAreaColor = '#4a90d9';
-
-function drawAreaClick(e){
-  if(!drawingNewArea) return;
-  newAreaPoints.push({lat: e.latlng.lat, lng: e.latlng.lng});
-  
-  // Draw point marker
-  const m = L.circleMarker([e.latlng.lat, e.latlng.lng],{
-    radius:6, fillColor: newAreaColor, color:'white', weight:2, fillOpacity:1
-  }).addTo(map);
-  editMarkers.push(m);
-  
-  // Update preview polygon
-  if(newAreaPreview) map.removeLayer(newAreaPreview);
-  if(newAreaPoints.length >= 2){
-    newAreaPreview = L.polygon(newAreaPoints.map(p=>[p.lat,p.lng]),{
-      color: newAreaColor, weight:2, fillColor: newAreaColor, fillOpacity:0.2, dashArray:'6,4'
-    }).addTo(map);
   }
-  
-  toast(`📍 ${newAreaPoints.length} punkter — tryk Gem når arealet er tegnet`);
 }
 
-async function saveAreaEdit(){
-  if(drawingNewArea){
-    // Save new area
-    if(newAreaPoints.length < 3){ toast('Tegn mindst 3 punkter'); return; }
-    const id = 'area_' + Date.now();
-    extraAreas[id] = {name: newAreaName, color: newAreaColor, points: newAreaPoints};
-    await fbWrite('extraAreas', extraAreas);
-    stopDrawing();
-    redrawAllAreas();
-    updateExtraAreaButtons();
-    toast('✅ ' + newAreaName + ' gemt!');
-    logActivity(currentUser + ' tilføjede jagtareal: ' + newAreaName);
-    return;
-  }
-  if(!editingArea) return;
-  await fbWrite('areaPoints', {nord: nordPoints, syd: sydPoints});
-  const aname = editingArea === 'nord' ? 'Nordstykket' : 'Sydstykket';
-  stopAreaEdit();
-  redrawAreas();
-  redrawAllAreas();
-  toast('✅ ' + aname + ' gemt!');
-  logActivity(currentUser + ' opdaterede jagtareal');
-}
-
-function stopDrawing(){
-  drawingNewArea = false;
-  map.off('click', drawAreaClick);
-  clearEditMarkers();
-  if(newAreaPreview){ map.removeLayer(newAreaPreview); newAreaPreview = null; }
-  map.dragging.enable();
-  map.touchZoom.enable();
-  map.scrollWheelZoom.enable();
-  map.doubleClickZoom.enable();
-  map.getContainer().style.cursor = '';
-  document.getElementById('area-edit-bar').style.display = 'none';
-  newAreaPoints = [];
-}
-
-function stopAreaEdit(){
-  if(drawingNewArea){ stopDrawing(); return; }
-  clearEditMarkers();
-  map.dragging.enable();
-  map.touchZoom.enable();
-  map.scrollWheelZoom.enable();
-  map.doubleClickZoom.enable();
-  document.getElementById('area-edit-bar').style.display = 'none';
-  editingArea = null;
-}
-
-function startAreaEditExtra(id){
-  if(!isAdmin()){ toast('⛔ Kun administrator'); return; }
-  const area = extraAreas[id];
-  if(!area) return;
-  
-  clearEditMarkers();
-  editingArea = id;
-  const points = area.points;
-  
-  document.getElementById('area-edit-bar').style.display = 'flex';
-  document.getElementById('area-edit-name').textContent = area.name;
-  
-  map.dragging.disable();
-  map.touchZoom.disable();
-  map.scrollWheelZoom.disable();
-  map.doubleClickZoom.disable();
-  
-  points.forEach((p, i) => {
-    const m = L.marker([p.lat, p.lng], {
-      draggable: true,
-      icon: L.divIcon({
-        className: '',
-        html: '<div style="width:24px;height:24px;background:'+area.color+';border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.5);"></div>',
-        iconSize:[24,24], iconAnchor:[12,12]
-      })
-    }).addTo(map);
-    m.on('drag', function(e){
-      points[i]={lat:e.latlng.lat,lng:e.latlng.lng};
-      updateEditPolygon();
-    });
-    editMarkers.push(m);
-  });
-  updateEditPolygon();
-  
-  const lp = document.getElementById('lp');
-  if(!lp.classList.contains('coll')) toggleP('lp');
-  toast('✏️ Træk punkterne for at redigere ' + area.name);
-}
-
-async function deleteExtraArea(id){
-  const area = extraAreas[id];
-  if(!area) return;
-  showConfirm('Slet ' + area.name + '?', async ()=>{
-    delete extraAreas[id];
-    await fbWrite('extraAreas', extraAreas);
-    redrawAllAreas();
-    updateExtraAreaButtons();
-    toast('🗑 ' + area.name + ' slettet');
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// GPS POSITION
-// ═══════════════════════════════════════════════════════════════
-// GPS POSITION
-// ═══════════════════════════════════════════════════════════════
-let gpsMarker = null;
-let gpsWatcher = null;
-
-function findMig(){
-  if(!gpsMarker){
-    startGPS();
-    return;
-  }
-  const pos = gpsMarker.getLatLng();
-  map.setView(pos, 16, {animate:true});
-  toast('📍 Viser din position');
-}
-
-function startGPS(){
-  if(!navigator.geolocation){
-    toast('GPS ikke tilgængeligt på denne enhed');
-    return;
-  }
-  toast('📍 Henter din position...');
-  
-  const onSuccess = (pos) => {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-    const acc = pos.coords.accuracy;
-    
-    if(!gpsMarker){
-      // Pulserende GPS ikon
-      const gpsIcon = L.divIcon({
-        className:'',
-        html:`<div style="position:relative;width:20px;height:20px;">
-          <div style="position:absolute;inset:-8px;background:rgba(74,144,217,0.2);border-radius:50%;animation:gpsPulse 2s ease-out infinite;"></div>
-          <div style="position:absolute;inset:0;background:#4a90d9;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.5);"></div>
-        </div>`,
-        iconSize:[20,20],
-        iconAnchor:[10,10]
-      });
-      gpsMarker = L.marker([lat,lng],{icon:gpsIcon,zIndexOffset:1000}).addTo(map);
-      gpsMarker.bindPopup(`<b>📍 Din position</b><br><small>Nøjagtighed: ${Math.round(acc)}m</small>`);
-      // Zoom til position
-      map.setView([lat,lng], 15);
-      toast('✅ Din position fundet!');
-    } else {
-      gpsMarker.setLatLng([lat,lng]);
-    }
-    updateDistances(lat, lng);
-  };
-  
-  const onError = (err) => {
-    console.log('GPS fejl:', err.code, err.message);
-    if(err.code === 1){
-      toast('⛔ GPS adgang nægtet — tillad lokation i Safari indstillinger');
-    } else if(err.code === 2){
-      toast('📍 Kan ikke finde din position — prøv udendørs');
-    } else {
-      toast('⏱️ GPS timeout — prøv igen');
-    }
-  };
-  
-  // Hent position med det samme
-  navigator.geolocation.getCurrentPosition(onSuccess, onError, {
-    enableHighAccuracy: true,
-    timeout: 15000,
-    maximumAge: 0
-  });
-  
-  // Fortsæt med at opdatere
-  gpsWatcher = navigator.geolocation.watchPosition(onSuccess, onError, {
-    enableHighAccuracy: true,
-    maximumAge: 10000,
-    timeout: 15000
-  });
-}
-
-document.getElementById('c5').addEventListener('change', function(){
-  if(this.checked){
-    startGPS();
-  } else {
-    if(gpsWatcher){ navigator.geolocation.clearWatch(gpsWatcher); gpsWatcher=null; }
-    if(gpsMarker){ map.removeLayer(gpsMarker); gpsMarker=null; }
-    toast('📍 GPS slået fra');
-  }
-});
-
-// Start GPS automatically when map is ready
-setTimeout(startGPS, 2000);
-
-// ═══════════════════════════════════════════════════════════════
-// SØG I SKYDELOG
-// ═══════════════════════════════════════════════════════════════
-// Search is handled inline in renderKills via kill-search input
-
-// ═══════════════════════════════════════════════════════════════
-// KALENDER VISNING
-// ═══════════════════════════════════════════════════════════════
-let huntViewMode = 'liste';
-
-function setHuntView(mode){
-  huntViewMode = mode;
-  document.getElementById('hunt-view-liste').style.background = mode==='liste' ? 'var(--gold)' : 'var(--bg2)';
-  document.getElementById('hunt-view-liste').style.color = mode==='liste' ? 'var(--bg)' : 'var(--text3)';
-  document.getElementById('hunt-view-liste').style.border = mode==='liste' ? 'none' : '1px solid var(--border)';
-  document.getElementById('hunt-view-liste').style.fontWeight = mode==='liste' ? '700' : '400';
-  document.getElementById('hunt-view-kalender').style.background = mode==='kalender' ? 'var(--gold)' : 'var(--bg2)';
-  document.getElementById('hunt-view-kalender').style.color = mode==='kalender' ? 'var(--bg)' : 'var(--text3)';
-  document.getElementById('hunt-view-kalender').style.border = mode==='kalender' ? 'none' : '1px solid var(--border)';
-  document.getElementById('hunt-view-kalender').style.fontWeight = mode==='kalender' ? '700' : '400';
-  renderHunts();
-}
-
-function renderKalender(){
-  const list = document.getElementById('hunt-list');
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const months = ['Januar','Februar','Marts','April','Maj','Juni','Juli','August','September','Oktober','November','December'];
-  
-  // Show 3 months
-  let html = '';
-  for(let m=0; m<3; m++){
-    const d = new Date(year, month+m, 1);
-    const mn = d.getMonth();
-    const yr = d.getFullYear();
-    const daysInMonth = new Date(yr, mn+1, 0).getDate();
-    const firstDay = (new Date(yr, mn, 1).getDay()+6)%7; // Monday=0
-    
-    html += `<div class="card" style="margin-bottom:16px;">
-      <div class="card-title" style="margin-bottom:12px;text-align:center;">${months[mn]} ${yr}</div>
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;">
-        ${['M','T','O','T','F','L','S'].map(d=>`<div style="font-size:10px;color:var(--text3);font-weight:700;padding:3px 0;">${d}</div>`).join('')}
-        ${Array(firstDay).fill('<div></div>').join('')}
-        ${Array.from({length:daysInMonth},(_,i)=>{
-          const day = i+1;
-          const dateStr = `${yr}-${String(mn+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-          const hunt = hunts.find(h=>h.date===dateStr);
-          const isToday = dateStr === new Date().toISOString().split('T')[0];
-          return `<div style="padding:4px 2px;border-radius:6px;background:${hunt?'var(--gold)':isToday?'var(--bg3)':'transparent'};color:${hunt?'var(--bg)':isToday?'var(--text)':'var(--text2)'};font-size:12px;font-weight:${hunt||isToday?'700':'400'};cursor:${hunt?'pointer':'default'};" ${hunt?`onclick="scrollToHunt('${dateStr}')" title="${hunt.type}"`:''}>${day}</div>`;
-        }).join('')}
-      </div>
-    </div>`;
-  }
-  list.innerHTML = html;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// ÅRSSTATISTIK
-// ═══════════════════════════════════════════════════════════════
-let statYearMode = 0; // 0=this year, 1=last year, -1=all
-
-function setStatYear(mode){
-  statYearMode = mode;
-  ['0','1','-1'].forEach(m=>{
-    const btn = document.getElementById('stat-year-'+m);
-    if(btn){
-      const active = String(mode)===m;
-      btn.style.background = active ? 'var(--gold)' : 'var(--bg2)';
-      btn.style.color = active ? 'var(--bg)' : 'var(--text3)';
-      btn.style.border = active ? 'none' : '1px solid var(--border)';
-      btn.style.fontWeight = active ? '700' : '400';
-    }
-  });
-  renderStats();
-}
-
-// ═══════════════════════════════════════════════════════════════
-// AUTO LOG UD efter 8 timer
-// ═══════════════════════════════════════════════════════════════
-let autoLogoutTimer = null;
-const AUTO_LOGOUT_MS = 8 * 60 * 60 * 1000; // 8 timer
-
-function resetAutoLogout(){
-  if(autoLogoutTimer) clearTimeout(autoLogoutTimer);
-  if(!currentUser) return;
-  autoLogoutTimer = setTimeout(()=>{
-    if(currentUser){
-      toast('⏰ Du er blevet logget ud automatisk efter 8 timer');
-      setTimeout(()=>doLogoutSilent(), 2000);
-    }
-  }, AUTO_LOGOUT_MS);
-}
-
-function doLogoutSilent(){
-  currentUser=null;
-  localStorage.removeItem('jt_user');
-  document.getElementById('login-screen').classList.remove('hidden');
-  document.getElementById('login-user').value='';
-  document.getElementById('login-pass').value='';
-  document.getElementById('tab-admin').style.display='none';
-}
-
-// Reset timer on user activity
-['touchstart','click','keydown'].forEach(evt=>{
-  document.addEventListener(evt, resetAutoLogout, {passive:true});
-});
-
-
-// ═══════════════════════════════════════════════════════════════
-// USER MENU
-// ═══════════════════════════════════════════════════════════════
-function toggleUserMenu(){
-  const overlay = document.getElementById('user-menu-overlay');
-  const nameEl = document.getElementById('user-menu-name');
-  if(nameEl) nameEl.textContent = '👤 ' + currentUser + (isAdmin()?' 👑':'');
-  overlay.classList.add('open');
-}
-function closeUserMenu(){
-  const overlay = document.getElementById('user-menu-overlay');
-  if(overlay) overlay.classList.remove('open');
-}
-function closeUserMenuOutside(e){}
-
-// ═══════════════════════════════════════════════════════════════
-// SKIFT ADGANGSKODE
-// ═══════════════════════════════════════════════════════════════
-function openChangePass(){
-  document.getElementById('cp-old').value='';
-  document.getElementById('cp-new').value='';
-  document.getElementById('cp-confirm').value='';
-  openModal('changepass-modal');
-}
-
-async function doChangePass(){
-  const oldPass = document.getElementById('cp-old').value;
-  const newPass = document.getElementById('cp-new').value;
-  const confirm = document.getElementById('cp-confirm').value;
-  if(!oldPass||!newPass||!confirm){ toast('Udfyld alle felter'); return; }
-  if(newPass !== confirm){ toast('De nye koder er ikke ens'); return; }
-  if(newPass.length < 4){ toast('Koden skal være mindst 4 tegn'); return; }
-  const oldHash = await hashPass(oldPass);
-  const member = getMembers()[currentUser];
-  const valid = member.hash ? oldHash === member.hash : member.pass === oldPass;
-  if(!valid){ toast('Forkert nuværende kode'); return; }
-  const newHash = await hashPass(newPass);
-  if(!DB.members) DB.members = {...DEFAULT_MEMBERS};
-  DB.members[currentUser] = {...DB.members[currentUser], hash: newHash};
-  await fbWrite('members', DB.members);
-  closeModal('changepass-modal');
-  toast('✅ Adgangskode ændret!');
-  logActivity(currentUser + ' ændrede sin adgangskode');
-}
-
-// ═══════════════════════════════════════════════════════════════
-// ADMIN VIGTIG BESKED
-// ═══════════════════════════════════════════════════════════════
-async function sendAdminMsg(){
-  const txt = document.getElementById('adminmsg-text').value.trim();
-  if(!txt){ toast('Skriv en besked'); return; }
-  const msg = {
-    text: txt, from: currentUser, ts: Date.now(),
-    time: new Date().toLocaleString('da-DK',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
-  };
-  DB.adminMsg = msg;
-  await fbWrite('adminMsg', msg);
-  closeModal('adminmsg-modal');
-  toast('📢 Besked sendt til alle!');
-  renderDashboard();
-  logActivity(currentUser + ' sendte vigtig besked');
-}
-
-async function loadAdminMsg(){
-  try{
-    const r = await fetch(FB+'/adminMsg.json');
-    if(r.ok){ const d = await r.json(); if(d) DB.adminMsg = d; }
-  } catch(e){}
-}
 
 // ═══════════════════════════════════════════════════════════════
 // VIBRATION
