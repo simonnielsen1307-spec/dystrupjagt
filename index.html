@@ -801,28 +801,46 @@ async function initFirebase(){
   if(DB.nextStandId) nextStandId=DB.nextStandId;
   else if(maxId>=nextStandId) nextStandId=maxId+1;
 
-  // 6. Populate and render
+  // 6. Populate all arrays from fresh Firebase data
   stands=[];
   populateArrays();
   buildLoginSelect();
   redrawAllAreas();
   updateExtraAreaBtns();
+
   if(!hadCache && savedUser && getMembers()[savedUser]){
     currentUser=savedUser;
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     afterLogin();
-  } else if(currentUser){
-    afterLogin();
-    if(document.getElementById('v-hjem').classList.contains('active')) renderDashboard();
+  }
+
+  // Re-render whatever view is active with fresh data
+  if(currentUser){
+    var av=document.querySelector('.view.active');
+    if(av){
+      var avid=av.id.replace('v-','');
+      if(avid==='hjem') renderDashboard();
+      else if(avid==='torne') renderTorne();
+      else if(avid==='log') renderKills();
+      else if(avid==='jagt') renderHunts();
+      else if(avid==='stat') renderStats();
+      else if(avid==='admin') loadAndRenderAdmin();
+    } else {
+      renderDashboard();
+    }
+    if(document.getElementById('user-badge').textContent==='👤'){
+      var crown=isAdmin()?' 👑':'';
+      document.getElementById('user-badge').textContent='👤 '+currentUser+crown;
+    }
   }
 
   saveCache();
   startPolling();
   toast('✅ Klar!');
 
-  // 7. Map stands
-  stands.forEach(s=>{ if(s.lat&&s.lng&&!s.marker) addMarker(s); });
+  // 7. Map stands with markers
+  stands.forEach(function(s){ if(s.lat&&s.lng&&!s.marker) addMarker(s); });
   renderStands();
 
   // 8. Event listeners - safe here, DOM is ready
@@ -1228,9 +1246,9 @@ function showView(v){
   if(!MAIN_TABS.includes(v)) document.getElementById('tab-mere').classList.add('active');
   // Load data fresh from DB
   if(v==='hjem'){ renderDashboard(); }
-  if(v==='torne'){ populateArrays(); renderTorne(); }
-  if(v==='log'){ populateArrays(); renderKills(); }
-  if(v==='jagt'){ populateArrays(); renderHunts(); }
+  if(v==='torne') renderTorne();
+  if(v==='log') renderKills();
+  if(v==='jagt') renderHunts();
   if(v==='vejr')   loadVejr();
   if(v==='chat'){ buildChatTabs(); renderChat(); clearChatBadge(); }
   if(v==='vagt')   renderVagt();
