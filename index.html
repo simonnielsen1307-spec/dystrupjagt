@@ -1226,11 +1226,11 @@ function showView(v){
   const tab=document.getElementById('tab-'+v);
   if(tab) tab.classList.add('active');
   if(!MAIN_TABS.includes(v)) document.getElementById('tab-mere').classList.add('active');
-  // Load data
+  // Load data fresh from DB
   if(v==='hjem'){ renderDashboard(); }
-  if(v==='torne')  renderTorne();
-  if(v==='log')    renderKills();
-  if(v==='jagt')   renderHunts();
+  if(v==='torne'){ populateArrays(); renderTorne(); }
+  if(v==='log'){ populateArrays(); renderKills(); }
+  if(v==='jagt'){ populateArrays(); renderHunts(); }
   if(v==='vejr')   loadVejr();
   if(v==='chat'){ buildChatTabs(); renderChat(); clearChatBadge(); }
   if(v==='vagt')   renderVagt();
@@ -1652,7 +1652,7 @@ async function saveKill(){
 function renderKills(){
   const el=document.getElementById('kill-list');
   if(!el) return;
-  const q=(document.getElementById('kill-search')||{}).value?value.toLowerCase:''()||'';
+  var ks=document.getElementById('kill-search'); var q=ks?ks.value.toLowerCase():'';
   let list=kills;
   if(q) list=kills.filter(k=>(k.hunter||'').toLowerCase().includes(q)||(k.animal||'').toLowerCase().includes(q)||(k.note||'').toLowerCase().includes(q));
   if(!list.length){el.innerHTML='<div class="empty">'+(q?'Ingen resultater for "'+q+'"':'Ingen registreringer endnu.')+'</div>';return;}
