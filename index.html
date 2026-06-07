@@ -863,17 +863,12 @@ async function initFirebase(){
     if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5) return;
     if(document.querySelector('.overlay.open')) return;
     if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
+    // Ignorer navigation hvis kort-fanen er aktiv
     var cur=document.querySelector('.view.active');
     if(!cur) return;
-    // Kort-fanen: ingen swipe navigation
     if(cur.id==='v-kort') return;
-    var vid=cur.id.replace('v-','');
-    var idx=MAIN_TABS.indexOf(vid);
-    if(idx===-1){
-      // "Mere" fane: swipe højre = luk og gå til jagt (sidste main tab)
-      if(dx>0) showView('jagt');
-      return;
-    }
+    var idx=MAIN_TABS.indexOf(cur.id.replace('v-',''));
+    if(idx===-1) return;
     if(dx<0&&idx<MAIN_TABS.length-1) showView(MAIN_TABS[idx+1]);
     else if(dx>0&&idx>0) showView(MAIN_TABS[idx-1]);
   },{passive:true});
