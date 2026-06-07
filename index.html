@@ -33,6 +33,8 @@ header{background:rgba(8,15,8,.95);backdrop-filter:blur(20px);-webkit-backdrop-f
 
 /* MAIN */
 main{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column;padding-bottom:62px;min-height:0;height:0;}
+
+/* VIEWS */
 .view{display:none;flex-direction:column;flex:1;overflow:hidden;min-height:0;height:100%;}
 .view.active{display:flex;flex:1;flex-direction:column;min-height:0;overflow:hidden;height:100%;}
 .view-inner{flex:1;overflow-y:auto;padding:12px 14px 80px;-webkit-overflow-scrolling:touch;min-height:0;overscroll-behavior:contain;}
@@ -116,8 +118,6 @@ nav.hidden{transform:translateY(100%);}
 /* AREA EDIT BAR */
 #area-bar{display:none;position:absolute;top:0;left:0;right:0;z-index:1001;background:rgba(10,5,15,.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(170,24,160,.4);padding:10px 12px;align-items:center;flex-wrap:wrap;gap:8px;}
 
-/* SCROLL HINT */
-.view-inner{flex:1;overflow-y:auto;padding:12px 14px 80px;-webkit-overflow-scrolling:touch;min-height:0;max-height:100%;overscroll-behavior:contain;}
 /* MISC */
 .hidden{display:none!important;}
 .empty{text-align:center;color:var(--text3);font-style:italic;padding:40px 20px;font-size:14px;}
@@ -178,7 +178,7 @@ nav::-webkit-scrollbar{display:none;}
 
 <!-- KORT -->
 <div class="view" id="v-kort">
-  <div style="position:relative;width:100%;">
+  <div style="position:relative;width:100%;height:100%;">
     <div id="map"></div>
     <div id="lp">
       <div id="lp-h" onclick="toggleLP()">🗺️ Kortlag <span id="lp-t">−</span></div>
@@ -260,7 +260,7 @@ nav::-webkit-scrollbar{display:none;}
     <button id="chat-alle-btn" onclick="switchChat('alle')" style="background:var(--gold);color:var(--bg);border:none;border-radius:20px;padding:7px 14px;font-family:var(--fl),serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">👥 Alle</button>
     <div id="chat-private-tabs" style="display:flex;gap:6px;"></div>
   </div>
-  <div id="chat-messages" style="flex:1;overflow-y:auto;padding:12px;-webkit-overflow-scrolling:touch;"></div>
+  <div id="chat-messages" style="flex:1;overflow-y:auto;padding:12px;-webkit-overflow-scrolling:touch;min-height:0;"></div>
   <div style="padding:10px 12px;border-top:1px solid var(--border2);display:flex;gap:8px;flex-shrink:0;background:var(--bg);">
     <input type="text" id="chat-input" placeholder="Skriv en besked..." style="flex:1;padding:12px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:24px;color:var(--text);font-family:var(--fl),serif;font-size:14px;">
     <button onclick="sendChat()" style="background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;border-radius:24px;padding:12px 20px;color:var(--bg);font-family:var(--fl),serif;font-weight:700;font-size:14px;cursor:pointer;">Send</button>
@@ -358,7 +358,6 @@ nav::-webkit-scrollbar{display:none;}
   </div>
   <div style="text-align:center;padding:6px 0 10px;"><button onclick="closeMore()" style="background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;">✕ Luk</button></div>
 </div>
-
 
 <!-- ══ MODALS ══════════════════════════════════════════════════ -->
 
@@ -666,7 +665,6 @@ function loadCache(){
 }
 
 function populateArrays(){
-  // Sync stands
   const incoming = Object.values(DB.stands||{});
   incoming.forEach(s=>{
     const ex = stands.find(e=>e.id===s.id);
@@ -675,7 +673,6 @@ function populateArrays(){
   });
   stands = stands.filter(s=>incoming.find(i=>i.id===s.id));
   stands.sort((a,b)=>a.id-b.id);
-  // Kills and hunts
   kills = Object.values(DB.kills||{}).sort((a,b)=>(b.id||0)-(a.id||0));
   hunts = Object.values(DB.hunts||{}).filter(x=>x&&x.date).sort((a,b)=>a.date.localeCompare(b.date));
 }
@@ -742,10 +739,8 @@ function afterLogin(){
 
 // ── INIT ─────────────────────────────────────────────────────────
 async function initFirebase(){
-  // Map initialized lazily when kort view first opens
   setTimeout(startGPS,2000);
 
-  // 1. Splash off after 1.2s
   setTimeout(()=>{
     const s=document.getElementById('splash');
     s.style.transition='opacity .4s';
@@ -753,10 +748,8 @@ async function initFirebase(){
     setTimeout(()=>s.remove(),400);
   },1200);
 
-  // 2. Try auto-login from localStorage
   const savedUser = localStorage.getItem('dj_user');
 
-  // 3. Load cache immediately
   const hadCache = loadCache();
   if(hadCache && savedUser && getMembers()[savedUser]){
     currentUser = savedUser;
@@ -764,7 +757,6 @@ async function initFirebase(){
     document.getElementById('app').classList.remove('hidden');
     buildLoginSelect();
     populateArrays();
-    // Show dashboard immediately from cache - don't wait for Firebase
     afterLogin();
     toast('📦 Opdaterer...');
   } else {
@@ -772,7 +764,6 @@ async function initFirebase(){
     document.getElementById('login-screen').classList.remove('hidden');
   }
 
-  // 4. Fetch Firebase in parallel
   try{
     const [dbR, msgR, areaR, extraR] = await Promise.all([
       fetch(FB+'.json').catch(()=>null),
@@ -791,7 +782,6 @@ async function initFirebase(){
     if(extraR && extraR.ok){ const d=await extraR.json(); if(d&&typeof d==='object') extraAreas=d; }
   }catch(e){ console.error('Firebase error:', e.message); }
 
-  // 5. Default stands
   if(!Object.keys(DB.stands||{}).length){
     const ds={};
     for(let i=1;i<=10;i++) ds[i]={id:i,name:'Torn '+i,lat:null,lng:null,booking:null};
@@ -805,7 +795,6 @@ async function initFirebase(){
   if(DB.nextStandId) nextStandId=DB.nextStandId;
   else if(maxId>=nextStandId) nextStandId=maxId+1;
 
-  // 6. Populate all arrays from fresh Firebase data
   firebaseLoaded = true;
   stands=[];
   populateArrays();
@@ -820,11 +809,9 @@ async function initFirebase(){
     afterLogin();
   }
 
-  // Re-render ALL views with fresh data
   if(currentUser){
     var crown2=isAdmin()?' 👑':'';
     document.getElementById('user-badge').textContent='👤 '+currentUser+crown2;
-    // Re-render active view
     var av=document.querySelector('.view.active');
     var avid=av?av.id.replace('v-',''):'hjem';
     showView(avid);
@@ -834,13 +821,11 @@ async function initFirebase(){
   startPolling();
   toast('✅ Klar!');
 
-  // 7. Map stands - only add markers if map is initialized
   if(map){
     stands.forEach(function(s){ if(s.lat&&s.lng&&!s.marker) addMarker(s); });
     renderStands();
   }
 
-  // 8. Event listeners - safe here, DOM is ready
   document.addEventListener('touchstart',()=>{ if(!navVisible) toggleNav(); },{passive:true});
   ['touchstart','click','keydown'].forEach(ev=>document.addEventListener(ev,resetAutoLogout,{passive:true}));
   document.addEventListener('click',function(e){
@@ -850,7 +835,7 @@ async function initFirebase(){
     btn.style.transform='scale(0.95)';
     setTimeout(function(){btn.style.transform='';},100);
   },{passive:true});
-  // Swipe gestures
+
   var _sx=0, _sy=0;
   document.addEventListener('touchstart',function(e){
     _sx=e.touches[0].clientX;
@@ -862,7 +847,6 @@ async function initFirebase(){
     if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5) return;
     if(document.querySelector('.overlay.open')) return;
     if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
-    // Ignorer navigation hvis kort-fanen er aktiv
     var cur=document.querySelector('.view.active');
     if(!cur) return;
     if(cur.id==='v-kort') return;
@@ -893,7 +877,6 @@ function initMapLayers(){
   ag=L.featureGroup().addTo(map);
   map.setView([56.448,10.652],14);
 
-  // Map click handler
   map.on('click',function(e){
     if(drawingNewArea){ drawNewAreaClick(e); return; }
     if(editingArea){ return; }
@@ -908,27 +891,24 @@ function initMapLayers(){
     toast('✅ '+placingStand.name+' placeret!');
   });
 
-// Kortlag checkboxes
-['c0','c1'].forEach(id=>{
-  const layers={c0:lOSM,c1:lTop};
-  document.getElementById(id).addEventListener('change',function(){
-    if(this.checked){
-      ['c0','c1'].forEach(o=>{ if(o!==id){ document.getElementById(o).checked=false; map.removeLayer(layers[o]); } });
-      map.addLayer(layers[id]);
-    } else map.removeLayer(layers[id]);
+  ['c0','c1'].forEach(id=>{
+    const layers={c0:lOSM,c1:lTop};
+    document.getElementById(id).addEventListener('change',function(){
+      if(this.checked){
+        ['c0','c1'].forEach(o=>{ if(o!==id){ document.getElementById(o).checked=false; map.removeLayer(layers[o]); } });
+        map.addLayer(layers[id]);
+      } else map.removeLayer(layers[id]);
+    });
   });
-});
-document.getElementById('c4').addEventListener('change',function(){ this.checked?ag.addTo(map):map.removeLayer(ag); });
-document.getElementById('c5').addEventListener('change',function(){
-  if(this.checked) startGPS();
-  else { if(gpsWatcher){navigator.geolocation.clearWatch(gpsWatcher);gpsWatcher=null;} if(gpsMarker){map.removeLayer(gpsMarker);gpsMarker=null;} }
-});
+  document.getElementById('c4').addEventListener('change',function(){ this.checked?ag.addTo(map):map.removeLayer(ag); });
+  document.getElementById('c5').addEventListener('change',function(){
+    if(this.checked) startGPS();
+    else { if(gpsWatcher){navigator.geolocation.clearWatch(gpsWatcher);gpsWatcher=null;} if(gpsMarker){map.removeLayer(gpsMarker);gpsMarker=null;} }
+  });
 
-// Start collapsed
-document.getElementById('lp').querySelector('#lp-b').style.display='none';
-document.getElementById('lp-t').textContent='+';
-
-} // end initMapLayers
+  document.getElementById('lp').querySelector('#lp-b').style.display='none';
+  document.getElementById('lp-t').textContent='+';
+}
 
 function toggleLP(){
   const b=document.getElementById('lp-b');
@@ -938,7 +918,6 @@ function toggleLP(){
   t.textContent=open?'+':'−';
 }
 
-// Area polygons
 function redrawAllAreas(){
   if(!ag) return;
   ag.clearLayers();
@@ -964,7 +943,6 @@ function updateExtraAreaBtns(){
     '<button onclick="deleteExtraArea(\''+id+'\')" style="padding:7px 9px;background:var(--red2);border:1px solid var(--red);border-radius:8px;color:#f4d0d0;font-size:11px;cursor:pointer;">🗑</button>'+
     '</div>'
   ).join('');
-  // Update admin
   const ae=document.getElementById('admin-extra-areas');
   if(ae) ae.innerHTML=entries.map(([id,a])=>
     '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">'+
@@ -973,7 +951,6 @@ function updateExtraAreaBtns(){
     '</div>'
   ).join('');
 }
-
 
 function addMarker(s){
   if(!map) return;
@@ -1005,7 +982,7 @@ function placeTorn(id){
   const s=stands.find(x=>x.id===id);
   if(!s) return;
   placingStand=s;
-  showView('kort'); // This will init map if needed
+  showView('kort');
   document.getElementById('mb').style.display='block';
   document.getElementById('mb-name').textContent=s.name;
   map.getContainer().style.cursor='crosshair';
@@ -1032,7 +1009,7 @@ function startGPS(){
 
 function gpsPos(pos){
   const lat=pos.coords.latitude, lng=pos.coords.longitude;
-  if(!map) return; // Map not yet initialized
+  if(!map) return;
   if(!gpsMarker){
     const ic=L.divIcon({className:'',html:'<div style="position:relative;width:20px;height:20px;"><div style="position:absolute;inset:-8px;background:rgba(74,144,217,.2);border-radius:50%;animation:gpsPulse 2s ease-out infinite;"></div><div style="position:absolute;inset:0;background:#4a90d9;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.5);"></div></div>',iconSize:[20,20],iconAnchor:[10,10]});
     gpsMarker=L.marker([lat,lng],{icon:ic}).addTo(map);
@@ -1045,12 +1022,9 @@ function gpsErr(e){
   if(e.code===1) toast('⛔ Tillad lokation i Safari indstillinger');
 }
 
-// Start GPS automatically
-
 // ── AREA EDITOR ──────────────────────────────────────────────────
 function startAreaEdit(area){
   if(!isAdmin()){ toast('⛔ Kun administrator'); return; }
-  // Ensure nordPoints/sydPoints are initialized
   if(!nordPoints) nordPoints=nord.map(function(p){return {lat:p[0],lng:p[1]};});
   if(!sydPoints) sydPoints=syd.map(function(p){return {lat:p[0],lng:p[1]};});
   clearEditMarkers();
@@ -1064,7 +1038,7 @@ function startAreaEdit(area){
   document.getElementById('area-bar-name').textContent=area==='nord'?'Nordstykket':area==='syd'?'Sydstykket':(extraAreas[area]||{}).name||area;
   map.dragging.disable(); map.touchZoom.disable(); map.scrollWheelZoom.disable();
 
-  showView('kort'); // Init map if needed first
+  showView('kort');
   setTimeout(function(){
     points.forEach(function(p,i){addEditMarker(p,i,points);});
     updateEditPoly();
@@ -1147,7 +1121,6 @@ function cancelAreaEdit(){
   redrawAllAreas();
 }
 
-// Draw new area
 function startDrawNewArea(){
   if(!isAdmin()){ toast('⛔ Kun administrator'); return; }
   const overlay=document.createElement('div');
@@ -1199,7 +1172,7 @@ function beginDrawNewArea(){
   clearEditMarkers();
   document.getElementById('area-bar').style.display='flex';
   document.getElementById('area-bar-name').textContent='Tegner: '+newAreaName;
-  showView('kort'); // Init map if needed
+  showView('kort');
   setTimeout(function(){
     if(map){
       map.dragging.disable();
@@ -1258,19 +1231,17 @@ function showView(v){
   const tab=document.getElementById('tab-'+v);
   if(tab) tab.classList.add('active');
   if(!MAIN_TABS.includes(v)) document.getElementById('tab-mere').classList.add('active');
-  // Load data fresh from DB
-  if(v==='hjem'){ renderDashboard(); }
+  if(v==='hjem') renderDashboard();
   if(v==='Tårne') renderTårne();
   if(v==='log') renderKills();
   if(v==='jagt') renderHunts();
-  if(v==='vejr')   loadVejr();
+  if(v==='vejr') loadVejr();
   if(v==='chat'){ buildChatTabs(); renderChat(); clearChatBadge(); }
-  if(v==='vagt')   renderVagt();
+  if(v==='vagt') renderVagt();
   if(v==='kvoter'){ renderKvoter(); if(isAdmin()) document.getElementById('kvote-add-btn').style.display=''; }
-  if(v==='stat')   renderStats();
-  if(v==='admin'){ loadAndRenderAdmin(); }
+  if(v==='stat') renderStats();
+  if(v==='admin') loadAndRenderAdmin();
   if(v==='kort'){
-    // CSS calc handles map height
     if(!map){
       initMap();
       initMapLayers();
@@ -1301,7 +1272,6 @@ function closeMore(){
   document.getElementById('tab-mere').classList.remove('active');
 }
 
-// Nav toggle
 function toggleNav(){
   navVisible=!navVisible;
   const nav=document.getElementById('main-nav');
@@ -1310,9 +1280,6 @@ function toggleNav(){
   tog.classList.toggle('up',navVisible);
 }
 
-
-
-// Auto logout
 let autoLogTimer=null;
 function resetAutoLogout(){
   if(autoLogTimer) clearTimeout(autoLogTimer);
@@ -1321,13 +1288,11 @@ function resetAutoLogout(){
   }, 8*60*60*1000);
 }
 
-// User menu
 function openUserMenu(){
   document.getElementById('user-modal-name').textContent='👤 '+currentUser+(isAdmin()?' 👑':'');
   openModal('user-modal');
 }
 
-// Search
 function openSearch(){
   openModal('search-modal');
   document.getElementById('search-input').value='';
@@ -1361,25 +1326,21 @@ function renderDashboard(){
   const now=new Date(), today=now.toISOString().split('T')[0];
   let h='';
 
-  // Admin message
   if(DB.adminMsg&&DB.adminMsg.text){
     h+='<div style="background:linear-gradient(135deg,#2a1a0a,#3a2a0a);border:2px solid var(--gold);border-radius:14px;padding:14px;margin-bottom:12px;">';
     h+='<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:4px;">📢 VIGTIG BESKED</div>';
     h+='<div style="font-size:14px;">'+DB.adminMsg.text+'</div></div>';
   }
 
-  // Welcome
   h+='<div style="text-align:center;padding:6px 0 12px;">';
   h+='<div style="font-size:20px;color:var(--gold);">God jagt, '+currentUser+'! 🦌</div>';
   h+='<div style="font-size:12px;color:var(--text3);margin-top:3px;">'+now.toLocaleDateString('da-DK',{weekday:'long',day:'numeric',month:'long'})+'</div>';
   h+='</div>';
 
-  // Weather (placeholder)
   h+='<div id="dash-weather" style="background:linear-gradient(135deg,#182818,#1e3a1e);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:12px;display:flex;align-items:center;gap:14px;min-height:80px;">';
   h+='<div style="font-size:36px;">🌤️</div><div style="flex:1;"><div style="font-size:22px;font-weight:700;color:var(--gold);">...</div><div style="font-size:12px;color:var(--text3);">Henter vejr...</div></div>';
   h+='<div style="text-align:right;font-size:11px;color:var(--text3);">🌄 --:--<br>🌇 --:--</div></div>';
 
-  // Stands
   const occ=stands.filter(s=>s.booking);
   const free=stands.filter(s=>s.lat&&!s.booking);
   h+='<div class="card"><div class="card-title">🌲 Tårne</div>';
@@ -1399,7 +1360,6 @@ function renderDashboard(){
   }
   h+='</div>';
 
-  // Next hunt
   const nextH=hunts.filter(x=>x.date>=today).sort((a,b)=>a.date.localeCompare(b.date))[0];
   h+='<div class="card"><div class="card-title">📅 Næste jagt</div>';
   if(nextH){
@@ -1412,7 +1372,6 @@ function renderDashboard(){
   }
   h+='</div>';
 
-  // Latest kills
   if(kills.length){
     h+='<div class="card"><div class="card-title">🎯 Seneste nedlagte</div>';
     kills.slice(0,3).forEach(k=>{
@@ -1426,7 +1385,6 @@ function renderDashboard(){
     h+='</div>';
   }
 
-  // Unread chat
   const unread=Object.values(DB.chat||{}).filter(m=>m.user!==currentUser&&!m.read).length;
   if(unread>0){
     h+='<div onclick="showView(\'chat\');closeMore();" style="background:linear-gradient(135deg,#1a2a1a,#1e3a1e);border:1px solid var(--green);border-radius:16px;padding:14px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:12px;">';
@@ -1434,7 +1392,6 @@ function renderDashboard(){
     h+='<div style="background:#c8302a;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">'+unread+'</div></div>';
   }
 
-  // Mini stats
   const thisYear=new Date().getFullYear().toString();
   h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">';
   h+='<div class="card" style="margin:0;text-align:center;padding:12px;"><div style="font-size:20px;font-weight:700;color:var(--gold);">'+kills.filter(k=>k.date&&k.date.startsWith(thisYear)).length+'</div><div style="font-size:10px;color:var(--text3);">Nedlagte i år</div></div>';
@@ -1442,7 +1399,6 @@ function renderDashboard(){
   h+='<div class="card" style="margin:0;text-align:center;padding:12px;"><div style="font-size:20px;font-weight:700;color:var(--gold);">'+hunts.filter(x=>x.date>=today).length+'</div><div style="font-size:10px;color:var(--text3);">Kommende jagter</div></div>';
   h+='</div>';
 
-  // Quick actions
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">';
   h+='<button onclick="openKillModal()" style="padding:16px;background:var(--green2);border:1px solid var(--green);border-radius:14px;color:var(--text);font-size:14px;cursor:pointer;"><div style="font-size:26px;margin-bottom:4px;">🎯</div>Registrer vildt</button>';
   h+='<button onclick="showView(\'Tårne\')" style="padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-size:14px;cursor:pointer;"><div style="font-size:26px;margin-bottom:4px;">🌲</div>Check ind</button>';
@@ -1454,28 +1410,19 @@ function renderDashboard(){
   h+='<button onclick="renderDashboard()" style="width:100%;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;color:var(--text3);font-size:13px;cursor:pointer;margin-bottom:20px;">🔄 Opdater</button>';
 
   el.innerHTML=h;
-  // Load weather async - show from cache first if available
   try{
     var wc=localStorage.getItem('dj_weather');
-    if(wc){
-      var wcd=JSON.parse(wc);
-      var wel=document.getElementById('dash-weather');
-      if(wel && wcd.html) wel.innerHTML=wcd.html;
-    }
+    if(wc){ var wcd=JSON.parse(wc); var wel=document.getElementById('dash-weather'); if(wel&&wcd.html) wel.innerHTML=wcd.html; }
   }catch(e){}
   setTimeout(loadWeather, 100);
 }
 
-// Weather
 async function loadWeather(){
   const el=document.getElementById('dash-weather');
   if(!el) return;
   try{
     const cached=localStorage.getItem('dj_weather');
-    if(cached){
-      const c=JSON.parse(cached);
-      if(Date.now()-c.ts<1800000){ el.innerHTML=c.html; return; }
-    }
+    if(cached){ const c=JSON.parse(cached); if(Date.now()-c.ts<1800000){ el.innerHTML=c.html; return; } }
   }catch(e){}
   try{
     const ctrl=new AbortController();
@@ -1601,7 +1548,6 @@ async function toggleFav(id){
   renderTårne();
 }
 
-// Check-in
 let checkingStand=null;
 function openCheckin(id){
   const s=stands.find(x=>x.id===id);
@@ -2275,14 +2221,11 @@ async function rydGamleData(){
 // ── POLLING ──────────────────────────────────────────────────────
 window.addEventListener('resize', function(){
   if(map && document.getElementById('v-kort').classList.contains('active')){
-    var h = window.innerHeight - 52 - 62;
-    document.getElementById('map').style.height = h + 'px';
     map.invalidateSize(true);
   }
 });
 
 function startPolling(){
-  // Poll chat every 6s
   setInterval(function(){
     fetch(FB+'/chat.json').then(function(r){
       if(!r.ok) return;
@@ -2299,7 +2242,6 @@ function startPolling(){
       if(onChat){buildChatTabs();renderChat();}
     }).catch(function(){});
   },6000);
-  // Poll stands every 20s
   setInterval(function(){
     fetch(FB+'/stands.json').then(function(r){
       return r.ok?r.json():null;
@@ -2320,9 +2262,6 @@ function startPolling(){
     }).catch(function(){});
   },20000);
 }
-
-
-// ── BUTTON ANIMATION ─────────────────────────────────────────────
 
 // ── START ────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', initFirebase);
