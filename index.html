@@ -23,7 +23,7 @@
   --shadow:0 8px 32px rgba(0,0,0,.6);
   --fp:'Playfair Display';--fl:'Lora';
 }
-body{font-family:'Lora',Georgia,serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-text-size-adjust:100%;}
+body{font-family:'Lora',Georgia,serif;background:var(--bg);color:var(--text);height:100svh;display:flex;flex-direction:column;overflow:hidden;-webkit-text-size-adjust:100%;}
 
 /* HEADER */
 header{background:rgba(8,15,8,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;}
@@ -32,10 +32,10 @@ header{background:rgba(8,15,8,.95);backdrop-filter:blur(20px);-webkit-backdrop-f
 .search-btn{position:absolute;left:10px;background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:8px;line-height:1;}
 
 /* MAIN */
-main{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column;}
-.view{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden;}
-.view.active{display:flex;}
-.view-inner{flex:1;overflow-y:auto;padding:12px 14px 80px;-webkit-overflow-scrolling:touch;min-height:0;}
+main{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column;padding-bottom:62px;}
+.view{display:none;flex-direction:column;flex:1;overflow:hidden;}
+.view.active{display:flex;flex:1;}
+.view-inner{flex:1;overflow-y:auto;padding:12px 14px 80px;-webkit-overflow-scrolling:touch;min-height:0;overscroll-behavior:contain;}
 .view-header{padding:12px 14px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .view-header h2{font-family:var(--fp),serif;font-size:20px;color:var(--gold);}
 
@@ -863,12 +863,17 @@ async function initFirebase(){
     if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5) return;
     if(document.querySelector('.overlay.open')) return;
     if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
-    // Ignorer navigation hvis kort-fanen er aktiv
     var cur=document.querySelector('.view.active');
     if(!cur) return;
+    // Kort-fanen: ingen swipe navigation
     if(cur.id==='v-kort') return;
-    var idx=MAIN_TABS.indexOf(cur.id.replace('v-',''));
-    if(idx===-1) return;
+    var vid=cur.id.replace('v-','');
+    var idx=MAIN_TABS.indexOf(vid);
+    if(idx===-1){
+      // "Mere" fane: swipe højre = luk og gå til jagt (sidste main tab)
+      if(dx>0) showView('jagt');
+      return;
+    }
     if(dx<0&&idx<MAIN_TABS.length-1) showView(MAIN_TABS[idx+1]);
     else if(dx>0&&idx>0) showView(MAIN_TABS[idx-1]);
   },{passive:true});
@@ -1253,9 +1258,6 @@ async function deleteExtraArea(id){
 const MAIN_TABS=['hjem','kort','torne','log','jagt'];
 
 function showView(v){
-  // Always close more menu first
-  document.getElementById('more-menu').style.display='none';
-  document.getElementById('more-overlay').style.display='none';
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-tab,.more-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('v-'+v).classList.add('active');
@@ -1870,17 +1872,11 @@ async function deleteHunt(hid){
 async function loadVejr(){
   const el=document.getElementById('vejr-content');
   if(!el) return;
-  el.innerHTML='<div class="empty">🔄 Henter vejr...</div>';
-  // Try up to 3 times
-  for(var attempt=0; attempt<3; attempt++){
-    try{
-      const ctrl=new AbortController();
-      setTimeout(()=>ctrl.abort(),15000);
-      const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=56.448&longitude=10.652&current=temperature_2m,relative_humidity_2m,windspeed_10m,winddirection_10m,weathercode,precipitation&hourly=temperature_2m,weathercode&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FCopenhagen&forecast_days=5',{signal:ctrl.signal});
-      if(!r.ok){
-        if(attempt<2){ await new Promise(res=>setTimeout(res,2000)); continue; }
-        el.innerHTML='<div class="empty">Vejr utilgængeligt — prøv igen senere</div>';return;
-      }
+  try{
+    const ctrl=new AbortController();
+    setTimeout(()=>ctrl.abort(),8000);
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=56.448&longitude=10.652&current=temperature_2m,relative_humidity_2m,windspeed_10m,winddirection_10m,weathercode,precipitation&hourly=temperature_2m,weathercode&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FCopenhagen&forecast_days=5',{signal:ctrl.signal});
+    if(!r.ok){el.innerHTML='<div class="empty">Vejr utilgængeligt</div>';return;}
     const d=await r.json();
     const cur=d.current;
     const daily=d.daily;
@@ -1913,12 +1909,7 @@ async function loadVejr(){
     }
     h+='</div>';
     el.innerHTML=h;
-      return; // success - exit loop
-    }catch(e){
-      if(attempt<2){ await new Promise(res=>setTimeout(res,2000)); continue; }
-      el.innerHTML='<div class="empty">Vejr utilgængeligt — tjek din forbindelse</div>';
-    }
-  }
+  }catch(e){el.innerHTML='<div class="empty">Vejr utilgængeligt</div>';}
 }
 
 // ── CHAT ─────────────────────────────────────────────────────────
