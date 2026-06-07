@@ -54,7 +54,7 @@ nav.hidden{transform:translateY(100%);}
 .nav-pill-bar{width:32px;height:3px;background:rgba(212,168,67,.4);border-radius:2px;transition:transform .3s;}
 
 /* MORE MENU */
-#more-menu{display:none;position:fixed;bottom:62px;left:0;right:0;background:rgba(10,18,10,.96);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid rgba(212,168,67,.3);border-radius:24px 24px 0 0;z-index:3000;padding:8px 0;box-shadow:0 -8px 40px rgba(0,0,0,.8);}
+#more-menu{display:none;position:fixed;bottom:62px;left:0;right:0;background:rgba(10,18,10,.96);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid rgba(212,168,67,.3);border-radius:24px 24px 0 0;z-index:3000;padding:8px 0;box-shadow:0 -8px 40px rgba(0,0,0,.8);max-height:50vh;overflow-y:auto;}
 .more-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 16px;}
 .more-btn{background:rgba(22,35,22,.6);border:1px solid rgba(212,168,67,.1);border-radius:16px;color:var(--text2);font-family:var(--fl),serif;cursor:pointer;padding:12px 4px;text-align:center;transition:all .2s;}
 .more-btn.active,.more-btn:active{background:rgba(212,168,67,.1);color:var(--gold);border-color:rgba(212,168,67,.4);}
@@ -1253,6 +1253,9 @@ async function deleteExtraArea(id){
 const MAIN_TABS=['hjem','kort','torne','log','jagt'];
 
 function showView(v){
+  // Always close more menu first
+  document.getElementById('more-menu').style.display='none';
+  document.getElementById('more-overlay').style.display='none';
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-tab,.more-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('v-'+v).classList.add('active');
@@ -1867,11 +1870,17 @@ async function deleteHunt(hid){
 async function loadVejr(){
   const el=document.getElementById('vejr-content');
   if(!el) return;
-  try{
-    const ctrl=new AbortController();
-    setTimeout(()=>ctrl.abort(),8000);
-    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=56.448&longitude=10.652&current=temperature_2m,relative_humidity_2m,windspeed_10m,winddirection_10m,weathercode,precipitation&hourly=temperature_2m,weathercode&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FCopenhagen&forecast_days=5',{signal:ctrl.signal});
-    if(!r.ok){el.innerHTML='<div class="empty">Vejr utilgængeligt</div>';return;}
+  el.innerHTML='<div class="empty">🔄 Henter vejr...</div>';
+  // Try up to 3 times
+  for(var attempt=0; attempt<3; attempt++){
+    try{
+      const ctrl=new AbortController();
+      setTimeout(()=>ctrl.abort(),15000);
+      const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=56.448&longitude=10.652&current=temperature_2m,relative_humidity_2m,windspeed_10m,winddirection_10m,weathercode,precipitation&hourly=temperature_2m,weathercode&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FCopenhagen&forecast_days=5',{signal:ctrl.signal});
+      if(!r.ok){
+        if(attempt<2){ await new Promise(res=>setTimeout(res,2000)); continue; }
+        el.innerHTML='<div class="empty">Vejr utilgængeligt — prøv igen senere</div>';return;
+      }
     const d=await r.json();
     const cur=d.current;
     const daily=d.daily;
@@ -1904,7 +1913,12 @@ async function loadVejr(){
     }
     h+='</div>';
     el.innerHTML=h;
-  }catch(e){el.innerHTML='<div class="empty">Vejr utilgængeligt</div>';}
+      return; // success - exit loop
+    }catch(e){
+      if(attempt<2){ await new Promise(res=>setTimeout(res,2000)); continue; }
+      el.innerHTML='<div class="empty">Vejr utilgængeligt — tjek din forbindelse</div>';
+    }
+  }
 }
 
 // ── CHAT ─────────────────────────────────────────────────────────
