@@ -860,8 +860,15 @@ async function initFirebase(){
     if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5) return;
     if(document.querySelector('.overlay.open')) return;
     if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
+    // Ignorer swipe på kortet og kort-kontroller
+    if(e.target.closest('#map')) return;
+    if(e.target.closest('#lp')) return;
+    if(e.target.closest('#area-bar')) return;
+    if(e.target.closest('#mb')) return;
+    // Ignorer swipe hvis kort-fanen er aktiv
     var cur=document.querySelector('.view.active');
     if(!cur) return;
+    if(cur.id==='v-kort') return;
     var idx=MAIN_TABS.indexOf(cur.id.replace('v-',''));
     if(idx===-1) return;
     if(dx<0&&idx<MAIN_TABS.length-1) showView(MAIN_TABS[idx+1]);
