@@ -33,9 +33,9 @@ header{background:rgba(8,15,8,.95);backdrop-filter:blur(20px);-webkit-backdrop-f
 
 /* MAIN */
 main{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column;padding-bottom:62px;}
-.view{display:none;flex-direction:column;flex:1;overflow:visible;}
-.view.active{display:flex;flex:1;}
-.view-inner{flex:1;overflow-y:auto;padding:12px 14px 80px;-webkit-overflow-scrolling:touch;min-height:0;overscroll-behavior:contain;height:0;}
+.view{display:none;flex-direction:column;flex:1;overflow:hidden;min-height:0;}
+.view.active{display:flex;flex:1;min-height:0;}
+.view-inner{flex:1;overflow-y:auto;padding:12px 14px 80px;-webkit-overflow-scrolling:touch;min-height:0;overscroll-behavior:contain;}
 .view-header{padding:12px 14px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .view-header h2{font-family:var(--fp),serif;font-size:20px;color:var(--gold);}
 
@@ -863,17 +863,12 @@ async function initFirebase(){
     if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5) return;
     if(document.querySelector('.overlay.open')) return;
     if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
+    // Ignorer navigation hvis kort-fanen er aktiv
     var cur=document.querySelector('.view.active');
     if(!cur) return;
-    // Kort-fanen: ingen swipe navigation
     if(cur.id==='v-kort') return;
-    var vid=cur.id.replace('v-','');
-    var idx=MAIN_TABS.indexOf(vid);
-    if(idx===-1){
-      // "Mere" fane: swipe højre = luk og gå til jagt (sidste main tab)
-      if(dx>0) showView('jagt');
-      return;
-    }
+    var idx=MAIN_TABS.indexOf(cur.id.replace('v-',''));
+    if(idx===-1) return;
     if(dx<0&&idx<MAIN_TABS.length-1) showView(MAIN_TABS[idx+1]);
     else if(dx>0&&idx>0) showView(MAIN_TABS[idx-1]);
   },{passive:true});
@@ -1872,18 +1867,11 @@ async function deleteHunt(hid){
 async function loadVejr(){
   const el=document.getElementById('vejr-content');
   if(!el) return;
-  el.innerHTML='<div class="empty">🔄 Henter vejr...</div>';
-  var url='https://api.open-meteo.com/v1/forecast?latitude=56.448&longitude=10.652&current=temperature_2m,relative_humidity_2m,windspeed_10m,winddirection_10m,weathercode,precipitation&hourly=temperature_2m,weathercode&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FCopenhagen&forecast_days=5';
-  for(var attempt=0;attempt<3;attempt++){
-    try{
-      const ctrl=new AbortController();
-      setTimeout(function(){ctrl.abort();},15000);
-      const r=await fetch(url,{signal:ctrl.signal});
-      if(!r.ok){
-        if(attempt<2){await new Promise(function(res){setTimeout(res,3000);});continue;}
-        el.innerHTML='<div class="empty">Vejr utilgængeligt — prøv igen</div>';
-        return;
-      }
+  try{
+    const ctrl=new AbortController();
+    setTimeout(()=>ctrl.abort(),8000);
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=56.448&longitude=10.652&current=temperature_2m,relative_humidity_2m,windspeed_10m,winddirection_10m,weathercode,precipitation&hourly=temperature_2m,weathercode&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FCopenhagen&forecast_days=5',{signal:ctrl.signal});
+    if(!r.ok){el.innerHTML='<div class="empty">Vejr utilgængeligt</div>';return;}
     const d=await r.json();
     const cur=d.current;
     const daily=d.daily;
@@ -1916,12 +1904,7 @@ async function loadVejr(){
     }
     h+='</div>';
     el.innerHTML=h;
-      return;
-    }catch(e){
-      if(attempt<2){await new Promise(function(res){setTimeout(res,3000);});continue;}
-      el.innerHTML='<div class="empty">Vejr utilgængeligt — tjek forbindelsen</div>';
-    }
-  }
+  }catch(e){el.innerHTML='<div class="empty">Vejr utilgængeligt</div>';}
 }
 
 // ── CHAT ─────────────────────────────────────────────────────────
