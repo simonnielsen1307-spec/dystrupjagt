@@ -1585,7 +1585,7 @@ async function doCheckin(){
   if(s.booking&&(s.booking.hunter===currentUser||isAdmin())){
     s.booking=null;
     DB.stands[s.id]=s;
-    await fbWrite('stands/'+s.id,s);
+    await fbWrite('stands/'+s.id,{id:s.id,name:s.name,lat:s.lat,lng:s.lng,booking:null});
     updMarker(s);
     renderTårne();
     closeModal('checkin-modal');
@@ -1594,7 +1594,7 @@ async function doCheckin(){
   } else if(!s.booking){
     s.booking={hunter:currentUser,time};
     DB.stands[s.id]=s;
-    await fbWrite('stands/'+s.id,s);
+    await fbWrite('stands/'+s.id,{id:s.id,name:s.name,lat:s.lat,lng:s.lng,booking:{hunter:currentUser,time}});
     updMarker(s);
     if('vibrate' in navigator) navigator.vibrate([100,50,100]);
     renderTårne();
