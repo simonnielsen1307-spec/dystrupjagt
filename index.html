@@ -23,7 +23,7 @@
   --shadow:0 8px 32px rgba(0,0,0,.6);
   --fp:'Playfair Display';--fl:'Lora';
 }
-body{font-family:'Lora',Georgia,serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-text-size-adjust:100%;}
+body{font-family:'Lora',Georgia,serif;background:var(--bg);color:var(--text);height:100svh;display:flex;flex-direction:column;overflow:hidden;-webkit-text-size-adjust:100%;}
 
 /* HEADER */
 header{background:rgba(8,15,8,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;}
@@ -32,10 +32,10 @@ header{background:rgba(8,15,8,.95);backdrop-filter:blur(20px);-webkit-backdrop-f
 .search-btn{position:absolute;left:10px;background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:8px;line-height:1;}
 
 /* MAIN */
-main{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column;}
-.view{display:none;flex-direction:column;overflow:hidden;height:100%;}
-.view.active{display:flex;}
-.view-inner{flex:1;overflow-y:auto;padding:12px 14px;-webkit-overflow-scrolling:touch;min-height:0;}
+main{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column;padding-bottom:62px;}
+.view{display:none;flex-direction:column;flex:1;overflow:hidden;}
+.view.active{display:flex;flex:1;}
+.view-inner{flex:1;overflow-y:auto;padding:12px 14px 80px;-webkit-overflow-scrolling:touch;min-height:0;overscroll-behavior:contain;}
 .view-header{padding:12px 14px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .view-header h2{font-family:var(--fp),serif;font-size:20px;color:var(--gold);}
 
@@ -60,7 +60,7 @@ nav.hidden{transform:translateY(100%);}
 .more-btn.active,.more-btn:active{background:rgba(212,168,67,.1);color:var(--gold);border-color:rgba(212,168,67,.4);}
 
 /* CARDS */
-.card{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;}
+.card{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px;position:relative;overflow:hidden;}
 .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.25),transparent);}
 .card-title{font-family:var(--fp),serif;font-size:17px;color:var(--gold);margin-bottom:8px;}
 
@@ -115,6 +115,9 @@ nav.hidden{transform:translateY(100%);}
 
 /* AREA EDIT BAR */
 #area-bar{display:none;position:absolute;top:0;left:0;right:0;z-index:1001;background:rgba(10,5,15,.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(170,24,160,.4);padding:10px 12px;align-items:center;flex-wrap:wrap;gap:8px;}
+
+/* SCROLL HINT */
+.view-inner::after{content:'';position:sticky;bottom:0;display:block;height:20px;background:linear-gradient(transparent,var(--bg));pointer-events:none;margin:-20px -14px 0;}
 
 /* MISC */
 .hidden{display:none!important;}
@@ -212,13 +215,13 @@ nav::-webkit-scrollbar{display:none;}
   </div>
 </div>
 
-<!-- Tårne -->
-<div class="view" id="v-Tårne">
+<!-- TORNE -->
+<div class="view" id="v-torne">
   <div class="view-header">
-    <h2>🌲 Tårne</h2>
+    <h2>🌲 Torne</h2>
     <button class="btn-add" onclick="openAddStand()">＋ Tilføj torn</button>
   </div>
-  <div class="view-inner" id="Tårne-list"></div>
+  <div class="view-inner" id="torne-list"></div>
 </div>
 
 <!-- SKYDELOG -->
@@ -337,7 +340,7 @@ nav::-webkit-scrollbar{display:none;}
 <nav id="main-nav">
   <button class="nav-tab active" id="tab-hjem" onclick="showView('hjem')"><span class="ti">🏠</span><span class="tl">Hjem</span></button>
   <button class="nav-tab" id="tab-kort" onclick="showView('kort')"><span class="ti">🗺</span><span class="tl">Kort</span></button>
-  <button class="nav-tab" id="tab-Tårne" onclick="showView('Tårne')"><span class="ti">🌲</span><span class="tl">Tårne</span></button>
+  <button class="nav-tab" id="tab-torne" onclick="showView('torne')"><span class="ti">🌲</span><span class="tl">Torne</span></button>
   <button class="nav-tab" id="tab-log" onclick="showView('log')"><span class="ti">🎯</span><span class="tl">Skydelog</span></button>
   <button class="nav-tab" id="tab-jagt" onclick="showView('jagt')"><span class="ti">📅</span><span class="tl">Jagter</span></button>
   <button class="nav-tab" id="tab-mere" onclick="toggleMore()"><span class="ti">···</span><span class="tl">Mere</span><span id="chat-badge" style="display:none;position:absolute;top:4px;right:6px;background:#c8302a;color:white;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;line-height:16px;text-align:center;"></span></button>
@@ -411,13 +414,13 @@ nav::-webkit-scrollbar{display:none;}
 </div></div>
 
 <!-- Torn navn modal -->
-<div class="overlay" id="Tårne-edit-modal">
+<div class="overlay" id="torne-edit-modal">
 <div class="modal">
   <h3>✏️ Rediger torn</h3>
   <div class="field"><label>Navn</label><input type="text" id="te-name" placeholder="Torn navn..."></div>
   <div class="modal-btns">
-    <button class="btn btn-g" onclick="saveTårnedit()">✓ Gem</button>
-    <button class="btn btn-q" onclick="closeModal('Tårne-edit-modal')">Annuller</button>
+    <button class="btn btn-g" onclick="saveTornEdit()">✓ Gem</button>
+    <button class="btn btn-q" onclick="closeModal('torne-edit-modal')">Annuller</button>
   </div>
 </div></div>
 
@@ -1242,7 +1245,7 @@ async function deleteExtraArea(id){
 }
 
 // ── NAVIGATION ───────────────────────────────────────────────────
-const MAIN_TABS=['hjem','kort','Tårne','log','jagt'];
+const MAIN_TABS=['hjem','kort','torne','log','jagt'];
 
 function showView(v){
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
@@ -1253,7 +1256,7 @@ function showView(v){
   if(!MAIN_TABS.includes(v)) document.getElementById('tab-mere').classList.add('active');
   // Load data fresh from DB
   if(v==='hjem'){ renderDashboard(); }
-  if(v==='Tårne') renderTårne();
+  if(v==='torne') renderTorne();
   if(v==='log') renderKills();
   if(v==='jagt') renderHunts();
   if(v==='vejr')   loadVejr();
@@ -1340,7 +1343,7 @@ function doSearch(){
       '<div style="font-size:12px;color:var(--text3);">'+k.hunter+' · '+sn+'</div></div></div>';
   });
   stands.filter(s=>(s.name||'').toLowerCase().includes(q)).slice(0,3).forEach(s=>{
-    h+='<div onclick="closeModal(\'search-modal\');showView(\'Tårne\')" style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg3);border-radius:12px;margin-bottom:8px;cursor:pointer;">'+
+    h+='<div onclick="closeModal(\'search-modal\');showView(\'torne\')" style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg3);border-radius:12px;margin-bottom:8px;cursor:pointer;">'+
       '<div style="font-size:22px;">🌲</div><div><div style="font-size:14px;font-weight:600;">'+s.name+'</div>'+
       '<div style="font-size:12px;color:var(--text3);">'+(s.booking?'🔴 '+s.booking.hunter:'🟢 Ledig')+'</div></div></div>';
   });
@@ -1375,7 +1378,7 @@ function renderDashboard(){
   // Stands
   const occ=stands.filter(s=>s.booking);
   const free=stands.filter(s=>s.lat&&!s.booking);
-  h+='<div class="card"><div class="card-title">🌲 Tårne</div>';
+  h+='<div class="card"><div class="card-title">🌲 Torne</div>';
   h+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
   h+='<div style="flex:1;background:var(--bg3);border-radius:10px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--green);">'+free.length+'</div><div style="font-size:11px;color:var(--text3);">Ledige</div></div>';
   h+='<div style="flex:1;background:var(--bg3);border-radius:10px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--pink);">'+occ.length+'</div><div style="font-size:11px;color:var(--text3);">Optaget</div></div>';
@@ -1388,7 +1391,7 @@ function renderDashboard(){
       h+='<div style="font-size:12px;color:var(--pink);">👤 '+(s.booking?s.booking.hunter:'')+'</div></div>';
     });
   } else {
-    h+='<div style="font-size:12px;color:var(--text3);text-align:center;padding:4px;">Alle Tårne ledige ✅</div>';
+    h+='<div style="font-size:12px;color:var(--text3);text-align:center;padding:4px;">Alle torne ledige ✅</div>';
   }
   h+='</div>';
 
@@ -1431,14 +1434,14 @@ function renderDashboard(){
   const thisYear=new Date().getFullYear().toString();
   h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">';
   h+='<div class="card" style="margin:0;text-align:center;padding:12px;"><div style="font-size:20px;font-weight:700;color:var(--gold);">'+kills.filter(k=>k.date&&k.date.startsWith(thisYear)).length+'</div><div style="font-size:10px;color:var(--text3);">Nedlagte i år</div></div>';
-  h+='<div class="card" style="margin:0;text-align:center;padding:12px;"><div style="font-size:20px;font-weight:700;color:var(--gold);">'+stands.filter(s=>s.lat).length+'</div><div style="font-size:10px;color:var(--text3);">Tårne placeret</div></div>';
+  h+='<div class="card" style="margin:0;text-align:center;padding:12px;"><div style="font-size:20px;font-weight:700;color:var(--gold);">'+stands.filter(s=>s.lat).length+'</div><div style="font-size:10px;color:var(--text3);">Torne placeret</div></div>';
   h+='<div class="card" style="margin:0;text-align:center;padding:12px;"><div style="font-size:20px;font-weight:700;color:var(--gold);">'+hunts.filter(x=>x.date>=today).length+'</div><div style="font-size:10px;color:var(--text3);">Kommende jagter</div></div>';
   h+='</div>';
 
   // Quick actions
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">';
   h+='<button onclick="openKillModal()" style="padding:16px;background:var(--green2);border:1px solid var(--green);border-radius:14px;color:var(--text);font-size:14px;cursor:pointer;"><div style="font-size:26px;margin-bottom:4px;">🎯</div>Registrer vildt</button>';
-  h+='<button onclick="showView(\'Tårne\')" style="padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-size:14px;cursor:pointer;"><div style="font-size:26px;margin-bottom:4px;">🌲</div>Check ind</button>';
+  h+='<button onclick="showView(\'torne\')" style="padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-size:14px;cursor:pointer;"><div style="font-size:26px;margin-bottom:4px;">🌲</div>Check ind</button>';
   h+='</div>';
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">';
   h+='<button onclick="openGallery()" style="padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-size:14px;cursor:pointer;"><div style="font-size:26px;margin-bottom:4px;">📸</div>Foto galleri</button>';
@@ -1502,12 +1505,12 @@ async function loadWeather(){
   }catch(e){}
 }
 
-// ── Tårne ────────────────────────────────────────────────────────
-function renderTårne(){
-  const el=document.getElementById('Tårne-list');
+// ── TORNE ────────────────────────────────────────────────────────
+function renderTorne(){
+  const el=document.getElementById('torne-list');
   if(!el) return;
   if(!stands.length){
-    el.innerHTML='<div class="empty">'+(firebaseLoaded?'Ingen Tårne. Tryk ＋ for at tilføje.':'🔄 Henter Tårne...')+'</div>';
+    el.innerHTML='<div class="empty">'+(firebaseLoaded?'Ingen torne. Tryk ＋ for at tilføje.':'🔄 Henter torne...')+'</div>';
     return;
   }
   const favs=DB.favorites||{};
@@ -1519,7 +1522,7 @@ function renderTårne(){
     const bk=s.booking, isFav=favs[currentUser+'_'+s.id];
     let btns='<button onclick="toggleFav('+s.id+')" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;cursor:pointer;">'+(isFav?'⭐':'☆')+'</button>';
     if(isAdmin()){
-      btns+='<button onclick="openTårneEdit('+s.id+')" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text2);font-size:12px;cursor:pointer;">✏️</button>';
+      btns+='<button onclick="openTorneEdit('+s.id+')" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text2);font-size:12px;cursor:pointer;">✏️</button>';
       btns+='<button onclick="deleteStand('+s.id+')" style="background:var(--red2);border:1px solid var(--red);border-radius:8px;padding:8px 10px;color:#f4d0d0;font-size:12px;cursor:pointer;">🗑</button>';
     }
     btns+='<button onclick="placeTorn('+s.id+')" style="background:'+(s.lat?'var(--bg3)':'rgba(61,122,82,.3)')+';border:1px solid '+(s.lat?'var(--border)':'var(--green)')+';border-radius:8px;padding:8px 10px;font-size:14px;cursor:pointer;">'+(s.lat?'🗺':'📍')+'</button>';
@@ -1546,19 +1549,19 @@ async function saveNewStand(){
   await fbWrite('stands/'+id,s);
   await fbWrite('nextStandId',nextStandId);
   closeModal('add-stand-modal');
-  renderTårne();
+  renderTorne();
   toast('✅ '+name+' oprettet!');
 }
 
-function openTårneEdit(id){
+function openTorneEdit(id){
   const s=stands.find(x=>x.id===id);
   if(!s) return;
   editingStandId=id;
   document.getElementById('te-name').value=s.name;
-  openModal('Tårne-edit-modal');
+  openModal('torne-edit-modal');
 }
 
-async function saveTårnedit(){
+async function saveTornEdit(){
   const s=stands.find(x=>x.id===editingStandId);
   if(!s) return;
   const name=document.getElementById('te-name').value.trim();
@@ -1567,8 +1570,8 @@ async function saveTårnedit(){
   DB.stands[s.id]=s;
   updMarker(s);
   await fbWrite('stands/'+s.id,s);
-  closeModal('Tårne-edit-modal');
-  renderTårne();
+  closeModal('torne-edit-modal');
+  renderTorne();
   toast('✅ Navn gemt');
 }
 
@@ -1580,7 +1583,7 @@ async function deleteStand(id){
     stands=stands.filter(x=>x.id!==id);
     delete DB.stands[id];
     await fbWrite('stands/'+id,null);
-    renderTårne();
+    renderTorne();
     toast('🗑 Torn slettet');
   });
 }
@@ -1591,7 +1594,7 @@ async function toggleFav(id){
   DB.favorites[key]=!DB.favorites[key];
   if(!DB.favorites[key]) delete DB.favorites[key];
   await fbWrite('favorites/'+key,DB.favorites[key]||null);
-  renderTårne();
+  renderTorne();
 }
 
 // Check-in
@@ -1614,7 +1617,7 @@ function openCheckin(id){
       ciBtn.style.display='none';
     }
   } else {
-    statusEl.innerHTML='<div style="font-size:32px;margin-bottom:8px;">🟢</div><div style="font-size:14px;color:var(--green);">Tårnet er ledigt</div>';
+    statusEl.innerHTML='<div style="font-size:32px;margin-bottom:8px;">🟢</div><div style="font-size:14px;color:var(--green);">Tornet er ledigt</div>';
     ciBtn.textContent='✓ Check ind'; ciBtn.style.background='linear-gradient(135deg,var(--gold),var(--gold2))'; ciBtn.style.display='';
   }
   openModal('checkin-modal');
@@ -1629,7 +1632,7 @@ async function doCheckin(){
     DB.stands[s.id]=s;
     await fbWrite('stands/'+s.id,s);
     updMarker(s);
-    renderTårne();
+    renderTorne();
     closeModal('checkin-modal');
     toast('✅ Tjekket ud fra '+s.name);
     logActivity(currentUser+' tjekket ud fra '+s.name);
@@ -1639,7 +1642,7 @@ async function doCheckin(){
     await fbWrite('stands/'+s.id,s);
     updMarker(s);
     if('vibrate' in navigator) navigator.vibrate([100,50,100]);
-    renderTårne();
+    renderTorne();
     closeModal('checkin-modal');
     toast('✅ Tjekket ind på '+s.name+' kl.'+time);
     logActivity(currentUser+' tjekket ind på '+s.name);
@@ -2307,7 +2310,7 @@ function startPolling(){
         }
       });
       if(wasChanged){
-        if(document.getElementById('v-Tårne').classList.contains('active')) renderTårne();
+        if(document.getElementById('v-torne').classList.contains('active')) renderTorne();
         if(document.getElementById('v-hjem').classList.contains('active')) renderDashboard();
       }
     }).catch(function(){});
