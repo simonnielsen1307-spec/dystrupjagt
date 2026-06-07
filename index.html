@@ -1872,11 +1872,18 @@ async function deleteHunt(hid){
 async function loadVejr(){
   const el=document.getElementById('vejr-content');
   if(!el) return;
-  try{
-    const ctrl=new AbortController();
-    setTimeout(()=>ctrl.abort(),8000);
-    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=56.448&longitude=10.652&current=temperature_2m,relative_humidity_2m,windspeed_10m,winddirection_10m,weathercode,precipitation&hourly=temperature_2m,weathercode&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FCopenhagen&forecast_days=5',{signal:ctrl.signal});
-    if(!r.ok){el.innerHTML='<div class="empty">Vejr utilgængeligt</div>';return;}
+  el.innerHTML='<div class="empty">🔄 Henter vejr...</div>';
+  var url='https://api.open-meteo.com/v1/forecast?latitude=56.448&longitude=10.652&current=temperature_2m,relative_humidity_2m,windspeed_10m,winddirection_10m,weathercode,precipitation&hourly=temperature_2m,weathercode&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FCopenhagen&forecast_days=5';
+  for(var attempt=0;attempt<3;attempt++){
+    try{
+      const ctrl=new AbortController();
+      setTimeout(function(){ctrl.abort();},15000);
+      const r=await fetch(url,{signal:ctrl.signal});
+      if(!r.ok){
+        if(attempt<2){await new Promise(function(res){setTimeout(res,3000);});continue;}
+        el.innerHTML='<div class="empty">Vejr utilgængeligt — prøv igen</div>';
+        return;
+      }
     const d=await r.json();
     const cur=d.current;
     const daily=d.daily;
@@ -1909,7 +1916,12 @@ async function loadVejr(){
     }
     h+='</div>';
     el.innerHTML=h;
-  }catch(e){el.innerHTML='<div class="empty">Vejr utilgængeligt</div>';}
+      return;
+    }catch(e){
+      if(attempt<2){await new Promise(function(res){setTimeout(res,3000);});continue;}
+      el.innerHTML='<div class="empty">Vejr utilgængeligt — tjek forbindelsen</div>';
+    }
+  }
 }
 
 // ── CHAT ─────────────────────────────────────────────────────────
