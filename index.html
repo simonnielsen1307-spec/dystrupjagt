@@ -853,19 +853,17 @@ async function initFirebase(){
   },{passive:true});
   // Swipe gestures
   var _sx=0, _sy=0;
-  document.addEventListener('touchstart',function(e){ _sx=e.touches[0].clientX; _sy=e.touches[0].clientY; },{passive:true});
+  document.addEventListener('touchstart',function(e){
+    _sx=e.touches[0].clientX;
+    _sy=e.touches[0].clientY;
+  },{passive:true});
   document.addEventListener('touchend',function(e){
     var dx=e.changedTouches[0].clientX-_sx;
     var dy=e.changedTouches[0].clientY-_sy;
     if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5) return;
     if(document.querySelector('.overlay.open')) return;
     if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
-    // Ignorer swipe på kortet og kort-kontroller
-    if(e.target.closest('#map')) return;
-    if(e.target.closest('#lp')) return;
-    if(e.target.closest('#area-bar')) return;
-    if(e.target.closest('#mb')) return;
-    // Ignorer swipe hvis kort-fanen er aktiv
+    // Ignorer navigation hvis kort-fanen er aktiv
     var cur=document.querySelector('.view.active');
     if(!cur) return;
     if(cur.id==='v-kort') return;
