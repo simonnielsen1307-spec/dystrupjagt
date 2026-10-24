@@ -216,10 +216,6 @@ nav::-webkit-scrollbar{display:none;}
         <div style="border-top:1px solid var(--border);margin:6px 0 4px;"></div>
         <div class="lr"><input type="checkbox" id="c4" checked><label for="c4"><div class="ld" style="background:rgba(200,60,160,.5);border:2px solid #a010a0;border-radius:50%;"></div> Jagtareal</label></div>
         <div class="lr"><input type="checkbox" id="c5" checked><label for="c5"><div class="ld" style="background:#4a90d9;border-radius:50%;"></div> Min position</label></div>
-        <div style="margin-top:8px;display:flex;gap:4px;">
-          <button onclick="startAreaEdit('nord')" style="flex:1;padding:6px;background:rgba(170,24,160,.2);border:1px solid #aa18a0;border-radius:7px;color:#f0b0e0;font-size:10px;cursor:pointer;">✏️ Nord</button>
-          <button onclick="startAreaEdit('syd')" style="flex:1;padding:6px;background:rgba(170,24,160,.2);border:1px solid #aa18a0;border-radius:7px;color:#f0b0e0;font-size:10px;cursor:pointer;">✏️ Syd</button>
-        </div>
         <div id="area-btns" style="margin-top:4px;display:flex;flex-direction:column;gap:4px;"></div>
         <button onclick="startDrawNewArea()" style="width:100%;margin-top:5px;padding:7px;background:rgba(255,122,26,.1);border:1px dashed rgba(255,122,26,.4);border-radius:8px;color:var(--gold);font-size:11px;cursor:pointer;">＋ Nyt areal</button>
       </div>
@@ -342,8 +338,6 @@ nav::-webkit-scrollbar{display:none;}
     <div class="card">
       <div class="card-title">🗺️ Jagtarealer</div>
       <div id="admin-areas">
-        <div style="font-size:13px;color:var(--text2);padding:4px 0;">🟣 Nordstykket — <button onclick="startAreaEdit('nord')" style="background:none;border:none;color:var(--gold);font-size:12px;cursor:pointer;">✏️ Rediger</button></div>
-        <div style="font-size:13px;color:var(--text2);padding:4px 0;">🟣 Sydstykket — <button onclick="startAreaEdit('syd')" style="background:none;border:none;color:var(--gold);font-size:12px;cursor:pointer;">✏️ Rediger</button></div>
         <div id="admin-extra-areas"></div>
       </div>
       <button onclick="startDrawNewArea()" style="width:100%;margin-top:10px;padding:12px;background:rgba(255,122,26,.1);border:1px dashed rgba(255,122,26,.4);border-radius:10px;color:var(--gold);font-family:var(--fl),sans-serif;font-size:13px;cursor:pointer;">＋ Tegn nyt jagtareal</button>
@@ -943,7 +937,8 @@ async function initFirebase(){
       }
     }
     if(msgR && msgR.ok){ const d=await msgR.json(); if(d) DB.adminMsg=d; }
-    if(areaR && areaR.ok){ const d=await areaR.json(); if(d){ if(d.nord)nordPoints=d.nord; if(d.syd)sydPoints=d.syd; } }
+    if(areaR && areaR.ok){ const d=await areaR.json(); if(d) fbWrite('areaPoints',null); }
+    nordPoints=[]; sydPoints=[];
     if(extraR && extraR.ok){ const d=await extraR.json(); if(d&&typeof d==='object') extraAreas=d; }
   }catch(e){ console.error('Firebase error:', e.message); }
 
@@ -1054,9 +1049,8 @@ function initMap(){
   buildBaseLayerList();
 }
 
-function px(x,y){ return[56.4455+(622-y)*0.0000359,10.6490+(x-298)*0.0000864]; }
-const nord=[px(415,162),px(447,150),px(483,150),px(540,165),px(548,210),px(530,220),px(530,252),px(548,262),px(543,300),px(508,313),px(488,298),px(462,310),px(425,308),px(395,285),px(388,248),px(403,215)];
-const syd=[px(258,450),px(322,450),px(322,492),px(373,492),px(440,530),px(447,580),px(447,643),px(392,672),px(392,718),px(308,718),px(280,732),px(312,645),px(308,662),px(298,672),px(280,668),px(270,652),px(273,636),px(283,628),px(222,778),px(182,835),px(30,705),px(33,655),px(95,618),px(95,595),px(33,558),px(30,528),px(130,510),px(195,503),px(195,492),px(258,492)];
+const nord=[];
+const syd=[];
 
 const aStyle={color:'#aa18a0',weight:2.5,fillColor:'#dd60cc',fillOpacity:0.28};
 let ag;
