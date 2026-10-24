@@ -579,12 +579,12 @@ async function resolveFB(){
 }
 
 const DEFAULT_MEMBERS = {
-  'Bjarne': { hash:'8bcb91721756e8551c5ef47d5a4b222632d21f08163d770dd1449dd5677b62ef', admin:false },
-  'Willy':  { hash:'bac5097707bae28d30248a68d8fb6888d97f5b5716e79cead44030968ccd0eec', admin:false },
-  'Tommy':  { hash:'33bb2a6cebc313b949106edc11b98ef939e6f031f6d3ba6c5b6a34e1f2a4088b', admin:false },
-  'Lars':   { hash:'5cc92f1175c9b512e6667c58f2c59ef591a40c0962a77a6cfcbdd855f487f242', admin:false },
-  'Simon':  { hash:'1d441af8ee8fab5ff520814c88b5f5da6bd1ba6e1e319ae1be75580b2e34fab7', admin:true  },
-  'Kaj':    { hash:'2562aabfb1339633739b32c6506a854b69e2973213622ebf63856ec6121c994a', admin:false }
+  'Bjarne': { hash:'a7141b62f037e8c867aa100a0d13a2fee5551d2fba1d41f6148cecc8309eeb6f', admin:false },
+  'Willy':  { hash:'a7141b62f037e8c867aa100a0d13a2fee5551d2fba1d41f6148cecc8309eeb6f', admin:false },
+  'Tommy':  { hash:'a7141b62f037e8c867aa100a0d13a2fee5551d2fba1d41f6148cecc8309eeb6f', admin:false },
+  'Lars':   { hash:'a7141b62f037e8c867aa100a0d13a2fee5551d2fba1d41f6148cecc8309eeb6f', admin:false },
+  'Simon':  { hash:'a7141b62f037e8c867aa100a0d13a2fee5551d2fba1d41f6148cecc8309eeb6f', admin:true  },
+  'Kaj':    { hash:'a7141b62f037e8c867aa100a0d13a2fee5551d2fba1d41f6148cecc8309eeb6f', admin:false }
 };
 
 const ANIMAL_COLORS = {
@@ -936,6 +936,11 @@ async function initFirebase(){
       const dd=(d && typeof d==='object')?d:{};
       ['stands','kills','hunts','members','chat','vagtplan','kvoter'].forEach(k=>{ DB[k]=dd[k]||{}; });
       DB.activity=dd.activity||[]; DB.nextStandId=dd.nextStandId||null;
+      if(!dd.pwReset2026){
+        const base=(DB.members&&Object.keys(DB.members).length)?DB.members:JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
+        Object.keys(base).forEach(n=>{ base[n]={...base[n],hash:'a7141b62f037e8c867aa100a0d13a2fee5551d2fba1d41f6148cecc8309eeb6f'}; delete base[n].pass; });
+        DB.members=base; fbWrite('members',base); fbWrite('pwReset2026',true);
+      }
     }
     if(msgR && msgR.ok){ const d=await msgR.json(); if(d) DB.adminMsg=d; }
     if(areaR && areaR.ok){ const d=await areaR.json(); if(d){ if(d.nord)nordPoints=d.nord; if(d.syd)sydPoints=d.syd; } }
