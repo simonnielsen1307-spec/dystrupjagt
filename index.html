@@ -670,7 +670,7 @@ function loadCache(){
 }
 
 function populateArrays(){
-  const incoming = Object.values(DB.stands||{});
+  const incoming = Object.values(DB.stands||{}).filter(Boolean);
   incoming.forEach(s=>{
     const ex = stands.find(e=>e.id===s.id);
     if(ex){ ex.name=s.name; ex.lat=s.lat; ex.lng=s.lng; ex.booking=s.booking; }
@@ -892,8 +892,9 @@ function initMapLayers(){
     else placingStand.marker.setLatLng([placingStand.lat,placingStand.lng]);
     updMarker(placingStand);
     saveOneSt(placingStand);
+    const pn=placingStand.name;
     cancelPlace();
-    toast('✅ '+placingStand.name+' placeret!');
+    toast('✅ '+pn+' placeret!');
   });
 
   ['c0','c1'].forEach(id=>{
@@ -1179,12 +1180,7 @@ function beginDrawNewArea(){
   document.getElementById('area-bar-name').textContent='Tegner: '+newAreaName;
   showView('kort');
   setTimeout(function(){
-    if(map){
-      map.dragging.disable();
-      if(map.touchZoom) map.touchZoom.disable();
-      if(map.scrollWheelZoom) map.scrollWheelZoom.disable();
-      map.on('click',drawNewAreaClick);
-    }
+    if(map) map.invalidateSize();
   }, map ? 0 : 300);
   const lp=document.getElementById('lp-b');
   if(lp.style.display!=='none') toggleLP();
@@ -2107,7 +2103,7 @@ async function saveMember(){
   const pass=document.getElementById('mm-pass').value.trim();
   const admin=document.getElementById('mm-admin').value==='1';
   if(!name){toast('Skriv navn');return;}
-  if(!DB.members) DB.members={...DEFAULT_MEMBERS};
+  if(!DB.members||!Object.keys(DB.members).length) DB.members=JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
   const existing=DB.members[name]||{};
   if(editingMember){
     if(pass){ const hash=await hashPass(pass); DB.members[name]={...existing,hash,admin}; }
@@ -2131,7 +2127,7 @@ async function resetMemberPass(name){
   showConfirm('Nulstil kode for '+name+'?',async()=>{
     const tempPass=name.toLowerCase()+'123';
     const hash=await hashPass(tempPass);
-    if(!DB.members) DB.members={...DEFAULT_MEMBERS};
+    if(!DB.members||!Object.keys(DB.members).length) DB.members=JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
     DB.members[name]={...DB.members[name],hash};
     await fbWrite('members',DB.members);
     renderMembers();
@@ -2142,7 +2138,7 @@ async function resetMemberPass(name){
 
 async function deleteMember(name){
   showConfirm('Slet '+name+'?',async()=>{
-    if(!DB.members) DB.members={...DEFAULT_MEMBERS};
+    if(!DB.members||!Object.keys(DB.members).length) DB.members=JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
     delete DB.members[name];
     await fbWrite('members',DB.members);
     buildLoginSelect();
@@ -2183,7 +2179,7 @@ async function doChangePass(){
   const m=getMembers()[currentUser];
   if(!(m.hash?oldHash===m.hash:m.pass===oldPass)){toast('Forkert nuværende kode');return;}
   const newHash=await hashPass(newPass);
-  if(!DB.members) DB.members={...DEFAULT_MEMBERS};
+  if(!DB.members||!Object.keys(DB.members).length) DB.members=JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
   DB.members[currentUser]={...DB.members[currentUser],hash:newHash};
   await fbWrite('members',DB.members);
   closeModal('changepass-modal');
